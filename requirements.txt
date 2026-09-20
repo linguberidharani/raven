@@ -8,6 +8,12 @@
 #     Verify:  python -c "from Evtx.Evtx import Evtx; print('python-evtx ok')"
 python-evtx>=0.8.1
 #
+# S4: SQLAlchemy 2.x is the database layer of the analysis database (raven.database). SQLite itself
+#     comes with Python.
+#     Install: python -m pip install -r requirements.txt
+#     Verify:  python -c "import sqlalchemy; print('sqlalchemy', sqlalchemy.__version__)"
+SQLAlchemy>=2.0
+#
 # Planned (not installed yet, confirmed at each stage):
-#   SQLAlchemy (database), PyYAML (rules), FastAPI, Uvicorn, pydantic, pydantic-settings,
-#   python-dotenv, argon2-cffi (password hashing), python-multipart (uploads)
+#   PyYAML (rules), FastAPI, Uvicorn, pydantic, pydantic-settings, python-dotenv,
+#   argon2-cffi (password hashing), python-multipart (uploads)
