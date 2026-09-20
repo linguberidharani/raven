@@ -3,7 +3,11 @@
 # its reason, exact install command and verification command.
 # Exact installed versions are recorded in requirements.lock.txt.
 #
+# S2: python-evtx reads the EVTX file exported from the VM (raven.collectors.evtx_loader).
+#     Install: python -m pip install -r requirements.txt
+#     Verify:  python -c "from Evtx.Evtx import Evtx; print('python-evtx ok')"
+python-evtx>=0.8.1
+#
 # Planned (not installed yet, confirmed at each stage):
-#   python-evtx (EVTX reading), SQLAlchemy (database), PyYAML (rules),
-#   FastAPI, Uvicorn, pydantic, pydantic-settings, python-dotenv,
-#   argon2-cffi (password hashing), python-multipart (uploads)
+#   SQLAlchemy (database), PyYAML (rules), FastAPI, Uvicorn, pydantic, pydantic-settings,
+#   python-dotenv, argon2-cffi (password hashing), python-multipart (uploads)
