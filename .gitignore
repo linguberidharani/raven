@@ -1,0 +1,28 @@
+# Python
+/venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Secrets and local configuration (never commit .env)
+.env
+
+# Generated data: registry, investigations, inbox, evidence
+/data/
+
+# Raw telemetry exports are kept out of the repository
+*.evtx
+
+# Logs
+*.log
+
+# Frontend (from S15)
+/frontend/node_modules/
+/frontend/dist/
+
+# Editors and OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

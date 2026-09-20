@@ -1,0 +1,9 @@
+# RAVEN runtime dependencies.
+# Rule 11: a package is added here only at the stage that uses it, together with
+# its reason, exact install command and verification command.
+# Exact installed versions are recorded in requirements.lock.txt.
+#
+# Planned (not installed yet, confirmed at each stage):
+#   python-evtx (EVTX reading), SQLAlchemy (database), PyYAML (rules),
+#   FastAPI, Uvicorn, pydantic, pydantic-settings, python-dotenv,
+#   argon2-cffi (password hashing), python-multipart (uploads)

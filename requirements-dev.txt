@@ -1,0 +1,5 @@
+# Development and test dependencies.
+-r requirements.txt
+
+# S0: test runner for the whole project.
+pytest>=8.0
