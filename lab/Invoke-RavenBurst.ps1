@@ -45,6 +45,7 @@ if ($Worker) {
 
 $null = New-Item -ItemType Directory -Path $TargetDir -Force
 $before = @(Get-ChildItem -LiteralPath $TargetDir -File | Where-Object { $_.Extension -eq $Extension }).Count
+if ($before -gt 0) { throw "$TargetDir already holds $before $Extension file(s). Run Invoke-RavenCleanup.ps1 first: Sysmon logs file creation, so a burst over existing files leaves no file-creation events." }
 $started = Get-Date
 $psExe = Join-Path $PSHOME 'powershell.exe'
 $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"{0}"' -f $PSCommandPath), '-Worker', '-Count', $Count, '-DurationSeconds', $DurationSeconds)

@@ -68,6 +68,8 @@ if ($Worker) {
 }
 
 $null = New-Item -ItemType Directory -Path $TargetDir -Force
+$existing = @(Get-ChildItem -LiteralPath $TargetDir -File | Where-Object { $_.Extension -eq $Extension }).Count
+if ($existing -gt 0) { throw "$TargetDir already holds $existing $Extension file(s). Run Invoke-RavenCleanup.ps1 first: Sysmon logs file creation, so a run over existing files leaves no file-creation events." }
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse($Address), $Port)
 $listener.Start()
 $banner = ''
