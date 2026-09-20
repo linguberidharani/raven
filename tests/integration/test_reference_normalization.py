@@ -4,6 +4,10 @@
 The reference file is real telemetry and is never committed (*.evtx is ignored). Put it at
 tests/fixtures/sysmon_export.evtx to run this test; without it the test is skipped.
 Everything is written to a temporary directory, never to the real data folder.
+
+The timestamp comes from the record time (TimeCreated), not from the Sysmon UtcTime: on this data
+132 events have a UtcTime about 3.5 hours after their record time. The spec's time range (6.5b) and
+its example correlation group ID (6.6, RAVEN-R001:1224:2026-09-13T08:39:49.695Z) follow the record time.
 """
 
 from pathlib import Path
@@ -61,3 +65,14 @@ def test_normalizing_twice_gives_identical_output(normalized):
     first, second, summary_first, summary_second = normalized
     assert summary_first == summary_second
     assert sha256_file(first) == sha256_file(second)
+
+
+def test_time_range_and_example_timestamp_follow_the_spec(normalized):
+    first, _, _, _ = normalized
+    events = list(read_normalized_jsonl(first))
+    stamps = [event["timestamp"] for event in events]
+    assert min(stamps).startswith("2026-09-12T18:04:54.")
+    assert max(stamps).startswith("2026-09-13T08:43:27.")
+    by_reference = {event["raw_event_ref"]: event for event in events}
+    assert by_reference["1:1542"]["event_id"] == 1
+    assert by_reference["1:1542"]["timestamp"] == "2026-09-13T08:39:49.695Z"

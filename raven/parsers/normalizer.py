@@ -7,9 +7,11 @@ Sysmon event 1 becomes process_creation, 3 network_connection, 11 file_create. E
 event ID becomes an "unsupported" event that keeps only its identity fields (reference,
 event ID, timestamp, computer); it is retained, never dropped, and never interpreted.
 
-timestamp is the Sysmon UtcTime (the time the event happened, in UTC, with milliseconds). Only
-when UtcTime is missing or cannot be parsed, the record's TimeCreated is used instead; each
-such case is counted in the result.
+timestamp is the record's TimeCreated (when the Windows event log wrote the record), converted to
+UTC, with the digits beyond the millisecond cut off. The Sysmon UtcTime inside event_data is NOT
+used for it. On the reference data 132 events carry a UtcTime about 3.5 hours after their record
+time, and the spec's time range and example IDs follow the record time. UtcTime stays available in
+event_data and raw_xml; how far it is from the record time is counted in the result for information.
 
 A supported event that lacks a required field, or has a number or true/false value that cannot
 be read, gets the status INVALID_EVENT_DATA. It is still written, with every field that could
@@ -95,29 +97,27 @@ def _check_evidence_id(evidence_id: Any) -> int:
     return evidence_id
 
 
-def _event_time(raw: dict[str, Any]) -> tuple[str, bool, float | None]:
-    """Return (timestamp, fallback_used, seconds between UtcTime and TimeCreated or None)."""
+def _timestamp_and_gap(raw: dict[str, Any]) -> tuple[str, float | None]:
+    """Return (timestamp from TimeCreated, seconds between Sysmon UtcTime and TimeCreated or None)."""
     try:
         created = parse_timestamp(raw["time_created"])
     except TimeFormatError as exc:
         raise NormalizationError(f"record {raw['record_id']}: time_created: {exc}") from exc
+    gap = None
     utc_text = raw["event_data"].get("UtcTime")
-    event_time = None
     if utc_text:
         try:
-            event_time = parse_timestamp(utc_text, assume_utc=True)
+            gap = abs((parse_timestamp(utc_text, assume_utc=True) - created).total_seconds())
         except TimeFormatError:
-            event_time = None
-    if event_time is None:
-        return format_iso_millis(created), True, None
-    return format_iso_millis(event_time), False, abs((event_time - created).total_seconds())
+            gap = None
+    return format_iso_millis(created), gap
 
 
-def _normalize(raw: dict[str, Any], evidence_id: int) -> tuple[dict[str, Any], list[str], bool, float | None]:
+def _normalize(raw: dict[str, Any], evidence_id: int) -> tuple[dict[str, Any], list[str], float | None]:
     problems = validate_raw_record(raw)
     if problems:
         raise NormalizationError("invalid raw record: " + "; ".join(problems))
-    timestamp, fallback, gap = _event_time(raw)
+    timestamp, gap = _timestamp_and_gap(raw)
 
     event: dict[str, Any] = {name: None for name in NORMALIZED_FIELDS}
     event["raw_event_ref"] = f"{evidence_id}:{raw['record_id']}"
@@ -129,7 +129,7 @@ def _normalize(raw: dict[str, Any], evidence_id: int) -> tuple[dict[str, Any], l
     if event_type is None:
         event["event_type"] = EVENT_TYPE_UNSUPPORTED
         event["normalization_status"] = STATUS_UNSUPPORTED
-        return event, [], fallback, gap
+        return event, [], gap
     event["event_type"] = event_type
 
     data = raw["event_data"]
@@ -162,7 +162,7 @@ def _normalize(raw: dict[str, Any], evidence_id: int) -> tuple[dict[str, Any], l
         event["hash_imphash"] = hashes["imphash"]
 
     event["normalization_status"] = STATUS_INVALID if issues else STATUS_OK
-    return event, issues, fallback, gap
+    return event, issues, gap
 
 
 def normalize_record(raw: dict[str, Any], evidence_id: int) -> dict[str, Any]:
@@ -177,9 +177,10 @@ def normalize_all(
 ) -> dict[str, Any]:
     """Normalize a raw JSONL file into a normalized JSONL file and return the counts.
 
-    The result holds: total, status_counts, event_type_counts, timestamp_fallbacks,
-    timestamp_gap_records (records with both times), timestamp_gap_over_1s,
-    timestamp_gap_max_seconds and invalid_examples (the first few INVALID_EVENT_DATA cases).
+    The result holds: total, status_counts, event_type_counts, utc_time_gap_records (records that
+    have a readable Sysmon UtcTime), utc_time_gap_over_1s, utc_time_gap_max_seconds (how far UtcTime
+    is from the record time, for information) and invalid_examples (the first few
+    INVALID_EVENT_DATA cases).
     """
     evidence_id = _check_evidence_id(evidence_id)
     source = Path(input_jsonl)
@@ -191,16 +192,14 @@ def normalize_all(
 
     statuses: Counter[str] = Counter()
     types: Counter[str] = Counter()
-    stats = {"fallbacks": 0, "gap_records": 0, "gap_over_1s": 0, "gap_max": None}
+    stats = {"gap_records": 0, "gap_over_1s": 0, "gap_max": None}
     examples: list[dict[str, Any]] = []
 
     def events() -> Iterator[dict[str, Any]]:
         for raw in read_raw_jsonl(source):
-            event, issues, fallback, gap = _normalize(raw, evidence_id)
+            event, issues, gap = _normalize(raw, evidence_id)
             statuses[event["normalization_status"]] += 1
             types[event["event_type"]] += 1
-            if fallback:
-                stats["fallbacks"] += 1
             if gap is not None:
                 stats["gap_records"] += 1
                 if gap > 1:
@@ -216,10 +215,9 @@ def normalize_all(
         "total": total,
         "status_counts": dict(sorted(statuses.items())),
         "event_type_counts": dict(sorted(types.items())),
-        "timestamp_fallbacks": stats["fallbacks"],
-        "timestamp_gap_records": stats["gap_records"],
-        "timestamp_gap_over_1s": stats["gap_over_1s"],
-        "timestamp_gap_max_seconds": stats["gap_max"],
+        "utc_time_gap_records": stats["gap_records"],
+        "utc_time_gap_over_1s": stats["gap_over_1s"],
+        "utc_time_gap_max_seconds": stats["gap_max"],
         "invalid_examples": examples,
     }
 
@@ -246,11 +244,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"status {status}: {number}")
     for event_type, number in summary["event_type_counts"].items():
         print(f"type {event_type}: {number}")
-    print(f"timestamp taken from TimeCreated instead of UtcTime: {summary['timestamp_fallbacks']}")
-    maximum = summary["timestamp_gap_max_seconds"]
+    maximum = summary["utc_time_gap_max_seconds"]
+    print("timestamp comes from the record time (TimeCreated); Sysmon UtcTime is not used for it")
     print(
-        f"UtcTime and TimeCreated differ by more than 1 s: {summary['timestamp_gap_over_1s']} "
-        f"of {summary['timestamp_gap_records']} (largest gap: "
+        f"Sysmon UtcTime differs from the record time by more than 1 s: {summary['utc_time_gap_over_1s']} "
+        f"of {summary['utc_time_gap_records']} (largest gap: "
         f"{'none' if maximum is None else f'{maximum:.3f} s'})"
     )
     for example in summary["invalid_examples"]:

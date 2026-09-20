@@ -2,6 +2,10 @@
 
 All raw records below are SYNTHETIC test data built in this file. They are not real telemetry.
 Only temporary directories are used.
+
+Every raw record has the record time 2026-09-13 08:39:49.700000+00:00 unless a test says otherwise,
+so a normalized timestamp of 2026-09-13T08:39:49.700Z proves that the timestamp comes from the
+record time (TimeCreated) and not from the Sysmon UtcTime, which differs in the sample data.
 """
 
 import pytest
@@ -77,7 +81,7 @@ def test_process_creation_mapping():
     assert event["raw_event_ref"] == "7:42"
     assert event["event_id"] == 1
     assert event["event_type"] == "process_creation"
-    assert event["timestamp"] == "2026-09-13T08:39:49.545Z"
+    assert event["timestamp"] == "2026-09-13T08:39:49.700Z"
     assert event["computer"] == "SYNTHETIC-LAB-HOST"
     assert event["process_guid"] == "{00000000-0000-0000-0000-000000000001}"
     assert event["process_id"] == 1224
@@ -102,7 +106,7 @@ def test_process_creation_mapping():
 def test_network_connection_mapping():
     event = normalize_record(make_raw(3, 43, NETWORK_DATA), 1)
     assert event["event_type"] == "network_connection"
-    assert event["timestamp"] == "2026-09-13T08:39:50.250Z"
+    assert event["timestamp"] == "2026-09-13T08:39:49.700Z"
     assert event["ip_address"] == "127.0.0.1"
     assert event["port"] == 47001
     assert event["source_ip"] == "10.0.2.15"
@@ -142,7 +146,7 @@ def test_unsupported_events_keep_only_identity_fields(event_id):
     assert event["normalization_status"] == STATUS_UNSUPPORTED
     assert event["raw_event_ref"] == "3:99"
     assert event["event_id"] == event_id
-    assert event["timestamp"] == "2026-09-13T08:39:52.000Z"
+    assert event["timestamp"] == "2026-09-13T08:39:49.700Z"
     assert event["computer"] == "SYNTHETIC-LAB-HOST"
     identity = {"raw_event_ref", "event_id", "event_type", "timestamp", "computer", "normalization_status"}
     assert all(event[name] is None for name in NORMALIZED_FIELDS if name not in identity)
@@ -228,15 +232,21 @@ def test_readable_fields_survive_an_invalid_event():
     assert event["command_line"] == '"C:\\Test\\synthetic.exe" --flag'
 
 
-def test_timestamp_falls_back_to_time_created_and_converts_to_utc():
-    data = {k: v for k, v in FILE_DATA.items() if k != "UtcTime"}
-    raw = make_raw(11, 6, data, time_created="2026-09-13 10:39:49.700123+02:00")
+def test_timestamp_is_the_record_time_and_ignores_a_very_different_utc_time():
+    far_ahead = dict(FILE_DATA, UtcTime="2026-09-13 12:09:44.389")
+    assert normalize_record(make_raw(11, 6, far_ahead), 1)["timestamp"] == "2026-09-13T08:39:49.700Z"
+
+
+def test_timestamp_converts_the_record_time_to_utc_and_cuts_off_microseconds():
+    raw = make_raw(11, 6, FILE_DATA, time_created="2026-09-13 10:39:49.700999+02:00")
     assert normalize_record(raw, 1)["timestamp"] == "2026-09-13T08:39:49.700Z"
 
 
-def test_an_unreadable_utc_time_falls_back_to_time_created():
-    raw = make_raw(11, 6, dict(FILE_DATA, UtcTime="not a time"))
-    assert normalize_record(raw, 1)["timestamp"] == "2026-09-13T08:39:49.700Z"
+def test_a_missing_or_unreadable_utc_time_does_not_matter():
+    no_utc = {k: v for k, v in FILE_DATA.items() if k != "UtcTime"}
+    assert normalize_record(make_raw(11, 6, no_utc), 1)["timestamp"] == "2026-09-13T08:39:49.700Z"
+    assert normalize_record(make_raw(11, 6, dict(FILE_DATA, UtcTime="not a time")), 1)["timestamp"] == "2026-09-13T08:39:49.700Z"
+    assert normalize_record(make_raw(11, 6, dict(FILE_DATA, UtcTime="not a time")), 1)["normalization_status"] == STATUS_OK
 
 
 def test_an_unreadable_time_created_is_an_error():
@@ -310,25 +320,26 @@ def test_normalize_all_reports_invalid_examples_and_timestamp_statistics(tmp_pat
     raw = write_raw(tmp_path, sample_records())
     summary = normalize_all(raw, tmp_path / "n.jsonl", 1)
     assert summary["invalid_examples"] == [{"record_id": 14, "event_id": 1, "problems": ["Image is missing"]}]
-    assert summary["timestamp_fallbacks"] == 0
-    assert summary["timestamp_gap_records"] == 6
+    assert "timestamp_fallbacks" not in summary
+    assert summary["utc_time_gap_records"] == 6
     # time_created is fixed at 08:39:49.700 in the sample records; UtcTime is 49.545, 50.250, 51.005,
     # 52.000 and 53.000, so three records differ by more than a second and the largest gap is 3.3 s.
-    assert summary["timestamp_gap_over_1s"] == 3
-    assert summary["timestamp_gap_max_seconds"] == pytest.approx(3.3, abs=0.001)
+    assert summary["utc_time_gap_over_1s"] == 3
+    assert summary["utc_time_gap_max_seconds"] == pytest.approx(3.3, abs=0.001)
 
 
-def test_normalize_all_counts_timestamp_fallbacks_and_large_gaps(tmp_path):
+def test_normalize_all_counts_large_utc_time_gaps_and_skips_records_without_utc_time(tmp_path):
     no_utc = {k: v for k, v in FILE_DATA.items() if k != "UtcTime"}
     records = [
         make_raw(11, 1, no_utc),
         make_raw(11, 2, dict(FILE_DATA, UtcTime="2026-09-13 08:30:00.000")),
     ]
-    summary = normalize_all(write_raw(tmp_path, records), tmp_path / "n.jsonl", 1)
-    assert summary["timestamp_fallbacks"] == 1
-    assert summary["timestamp_gap_records"] == 1
-    assert summary["timestamp_gap_over_1s"] == 1
-    assert summary["timestamp_gap_max_seconds"] == pytest.approx(589.7, abs=0.001)
+    output = tmp_path / "n.jsonl"
+    summary = normalize_all(write_raw(tmp_path, records), output, 1)
+    assert summary["utc_time_gap_records"] == 1
+    assert summary["utc_time_gap_over_1s"] == 1
+    assert summary["utc_time_gap_max_seconds"] == pytest.approx(589.7, abs=0.001)
+    assert [e["timestamp"] for e in read_normalized_jsonl(output)] == ["2026-09-13T08:39:49.700Z"] * 2
 
 
 def test_normalize_all_twice_gives_identical_files(tmp_path):
@@ -379,6 +390,8 @@ def test_main_prints_the_counts(tmp_path, capsys):
     assert "status UNSUPPORTED_EVENT_ID: 2" in printed
     assert "status INVALID_EVENT_DATA: 1" in printed
     assert "type unsupported: 2" in printed
+    assert "timestamp comes from the record time" in printed
+    assert "Sysmon UtcTime differs from the record time by more than 1 s: 3 of 6" in printed
     assert "invalid: record 14 event 1: Image is missing" in printed
 
 
