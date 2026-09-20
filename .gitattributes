@@ -1,0 +1,2 @@
+# Keep the Sysmon config byte-exact (its SHA256 must match the VM's running config).
+lab/sysmon-config.xml -text
