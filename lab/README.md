@@ -29,4 +29,4 @@ so it does nothing on the host.
   changing the host firewall and keeps the connection inside the VM.
 - Sysmon records the SHA256 hash in process creation events (event 1). File creation (event 11) and
   network connection (event 3) events do not carry a hash.
-- Take a VM snapshot before each test session.
+- Take a VM snapshot before each test session.- Burst and stager refuse to run when .raventest files already exist in their folder (Sysmon logs file creation, so a run over existing files leaves no file-creation events). Run Invoke-RavenCleanup.ps1 first.
