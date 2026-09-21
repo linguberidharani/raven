@@ -170,3 +170,13 @@ Only real output is recorded here. Nothing is marked passed without it.
 - Observation: the top file assets of the reference session are C:\ProgramData\USOPrivate\UpdateStore\store.db-journal (20 events, Windows Update Orchestrator) and a file in the Windows credential store of a user profile (18 events); the top process image is svchost.exe. This fits the earlier observation that the reference session looks like normal Windows activity. The real paths contain a user name, so RARF and report files should be handled with that in mind.
 - Not seen: the server log lines (they were not pasted).
 - Result: passed
+
+### S14 VM collector, inbox watcher, incremental run, 2026-09-21
+
+- Code (6b95b13): lab\Invoke-RavenCollector.ps1 with lab\COLLECTOR.md; raven\collectors\inbox.py; raven\services\inbox.py (link, cursors, watcher); raven\api\routes\inbox.py and schemas\inbox.py; changes in services\pipeline.py, services\analysis_runs.py, config.py, api\main.py, api\dependencies.py; docs\api-contract.md; tests in tests\collectors, tests\services, tests\api and tests\integration. No new dependencies. Tests: 1052 passed in 388.46 s in the venv.
+- Live VM test (VM RAVEN-Windows-Lab, host clock UTC 12:45 to 12:52): the collector started with -FromNow after record ID 24458 and wrote 22 batches, record IDs 24459 to 24882 (424 events), to sysmon-DHARANI.jsonl. INV-2026-002 was created through the API; the file was found in the inbox and linked (evidence 2, vm_collector). Without any analysis request the watcher took the data in steps: events 31, 117, 167, ... 424 (equal to the 424 the collector wrote, so no loss and no duplicates); each step was followed by an automatic run (source uploaded, processing, ready; stages collect, deduplicate, timeline, completed); detections 2 to 31, timeline events 20 to 275.
+- Burst (Invoke-RavenBurst.ps1, worker PID 3504, 60 files, 12:51:11Z to 12:51:57Z, exit code 0): timeline events with "raventest" appeared as 8, 18, 28, 38, 48, 58 while the burst ran (about 5 s per step) and stayed at 58.
+- Observation: 58 and not 60. Rule R003 groups ten file creations of one process; the first step being 8 (not 10) shows that the first group holds two file creations that are not .raventest files, so the last two burst events are fewer than ten and belong to no group. Checked with a read-only query of the workspace database (result in the next entry).
+- My mistake: the stop condition of the watch script (raventest >= 60) could never be met, so the script was stopped by hand and its final summary was not printed. The product is not affected.
+- Not seen: the final summary of the watch script, the server log lines, and the cleanup and shutdown of the VM.
+- Result: passed
