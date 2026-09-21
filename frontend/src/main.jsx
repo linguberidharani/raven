@@ -13,6 +13,7 @@ import './styles/layout.css';
 import './styles/auth.css';
 import './styles/intro.css';
 import './styles/investigation.css';
+import './styles/analysis.css';
 import App from './App';
 
 createRoot(document.getElementById('root')).render(

@@ -131,3 +131,57 @@ export function stageStatusInfo(status) {
 export function isRunActive(run) {
   return run?.status === 'queued' || run?.status === 'running';
 }
+
+/** RAVEN-R003 -> R003 */
+export function shortRuleId(ruleId) {
+  return typeof ruleId === 'string' ? ruleId.replace(/^RAVEN-/, '') : '';
+}
+
+/** C:\Windows\System32\svchost.exe -> svchost.exe */
+export function pathBasename(path) {
+  if (typeof path !== 'string' || path === '') return '';
+  const parts = path.split(/[\\/]/);
+  return parts[parts.length - 1] || path;
+}
+
+const MATCH_KEYS = { process_id: 'process ID', process_guid: 'process GUID', computer: 'computer' };
+
+export function matchKeyLabel(key) {
+  return MATCH_KEYS[key] ?? (typeof key === 'string' && key ? key.replace(/_/g, ' ') : 'key');
+}
+
+const FIELD_LABELS = {
+  id: 'Database ID',
+  event_id: 'Sysmon event ID',
+  event_type: 'Event type',
+  timestamp: 'Time (UTC)',
+  computer: 'Computer',
+  process_guid: 'Process GUID',
+  process_id: 'Process ID',
+  process_name: 'Process image',
+  parent_process_guid: 'Parent GUID',
+  parent_process_id: 'Parent process ID',
+  parent_process_name: 'Parent image',
+  command_line: 'Command line',
+  parent_command_line: 'Parent command line',
+  user: 'User',
+  integrity_level: 'Integrity level',
+  hash_sha256: 'SHA-256',
+  hash_md5: 'MD5',
+  hash_imphash: 'Import hash',
+  hashes_raw: 'Hashes as recorded',
+  ip_address: 'Destination IP',
+  port: 'Destination port',
+  source_ip: 'Source IP',
+  source_port: 'Source port',
+  protocol: 'Protocol',
+  initiated: 'Initiated',
+  file_path: 'File path',
+  normalization_status: 'Normalization',
+};
+
+export function fieldLabel(name) {
+  if (FIELD_LABELS[name]) return FIELD_LABELS[name];
+  const text = String(name).replace(/_/g, ' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

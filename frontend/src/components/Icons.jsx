@@ -127,10 +127,10 @@ const PATHS = {
 };
 
 /** A 24 px line icon. It is decorative unless a title is given. */
-export function Icon({ name, size = 20, title }) {
+export function Icon({ name, size = 20, title, className = '' }) {
   return (
     <svg
-      className="icon"
+      className={`icon${className ? ` ${className}` : ''}`}
       width={size}
       height={size}
       viewBox="0 0 24 24"

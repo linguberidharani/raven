@@ -1,15 +1,15 @@
 import { useParams } from 'react-router-dom';
 import { WORKFLOW } from '../utils/navigation';
+import Detection from './Detection';
 import Evidence from './Evidence';
 import NotFound from './NotFound';
 import Planned from './Planned';
+import Reconstruction from './Reconstruction';
 
 // The real page of each step is registered here as it is built.
-export const STEP_PAGES = { evidence: Evidence };
+export const STEP_PAGES = { evidence: Evidence, detection: Detection, reconstruction: Reconstruction };
 
 const ENDPOINTS = {
-  detection: ['GET /detections'],
-  reconstruction: ['GET /reconstruction'],
   timeline: ['GET /timeline', 'GET /events/{ref}'],
   impact: ['GET /impact'],
   rarf: ['GET /rarf'],

@@ -110,3 +110,30 @@ describe('labels for events, sources and analysis stages', () => {
     expect(isRunActive(null)).toBe(false);
   });
 });
+
+import { fieldLabel, matchKeyLabel, pathBasename, shortRuleId } from './mapping';
+
+describe('rule, path and field labels', () => {
+  it('shortens a rule ID', () => {
+    expect(shortRuleId('RAVEN-R003')).toBe('R003');
+    expect(shortRuleId('OTHER')).toBe('OTHER');
+    expect(shortRuleId(null)).toBe('');
+  });
+  it('takes the file name of a Windows or Unix path', () => {
+    expect(pathBasename('C:\\Windows\\System32\\svchost.exe')).toBe('svchost.exe');
+    expect(pathBasename('/usr/bin/x')).toBe('x');
+    expect(pathBasename('plain.exe')).toBe('plain.exe');
+    expect(pathBasename('')).toBe('');
+    expect(pathBasename(null)).toBe('');
+  });
+  it('names a match key', () => {
+    expect(matchKeyLabel('process_id')).toBe('process ID');
+    expect(matchKeyLabel('some_key')).toBe('some key');
+    expect(matchKeyLabel(undefined)).toBe('key');
+  });
+  it('names normalized fields', () => {
+    expect(fieldLabel('process_name')).toBe('Process image');
+    expect(fieldLabel('hash_sha256')).toBe('SHA-256');
+    expect(fieldLabel('something_new')).toBe('Something new');
+  });
+});

@@ -57,3 +57,22 @@ describe('formatNumber and shortHash', () => {
     expect(shortHash(null)).toBe('\u2014');
   });
 });
+
+import { formatClock, formatWindow } from './format';
+
+describe('formatWindow and formatClock', () => {
+  it('writes a rule window', () => {
+    expect(formatWindow(60)).toBe('1 min');
+    expect(formatWindow(45)).toBe('45 s');
+    expect(formatWindow(120)).toBe('2 min');
+    expect(formatWindow(90)).toBe('1 min 30 s');
+    expect(formatWindow(-1)).toBe('\u2014');
+    expect(formatWindow(null)).toBe('\u2014');
+  });
+  it('writes the time of day with milliseconds', () => {
+    expect(formatClock('2026-09-13T08:39:49.545Z')).toBe('08:39:49.545');
+    expect(formatClock('2026-09-13T08:39:49Z')).toBe('08:39:49.000');
+    expect(formatClock('nope')).toBe('\u2014');
+    expect(formatClock(undefined)).toBe('\u2014');
+  });
+});

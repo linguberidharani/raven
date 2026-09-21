@@ -85,3 +85,161 @@ export function analysisRun(status, completed = 0, extra = {}) {
     ...extra,
   };
 }
+
+export const RULES = [
+  {
+    rule_id: 'RAVEN-R001',
+    rule_name: 'Mass File Modification Burst',
+    description: 'A process is created and, within 60 seconds, five or more file creation events are recorded for the same process ID.',
+    severity: 'HIGH',
+    confidence: 85,
+    match_key: 'process_id',
+    time_window_seconds: 60,
+    steps: [{ event_type: 'process_creation', min_count: 1 }, { event_type: 'file_create', min_count: 5 }],
+    enabled: true,
+    groups: 19,
+  },
+  {
+    rule_id: 'RAVEN-R002',
+    rule_name: 'Process Network File Stager Pattern',
+    description: 'A process is created, then makes a network connection, then a file creation event follows.',
+    severity: 'MEDIUM',
+    confidence: 75,
+    match_key: 'process_id',
+    time_window_seconds: 120,
+    steps: [{ event_type: 'process_creation', min_count: 1 }, { event_type: 'network_connection', min_count: 1 }, { event_type: 'file_create', min_count: 1 }],
+    enabled: true,
+    groups: 0,
+  },
+  {
+    rule_id: 'RAVEN-R003',
+    rule_name: 'Sustained File Creation Burst',
+    description: 'Ten or more file creation events are recorded for the same process ID.',
+    severity: 'HIGH',
+    confidence: 80,
+    match_key: 'process_id',
+    time_window_seconds: 60,
+    steps: [{ event_type: 'file_create', min_count: 10 }],
+    enabled: true,
+    groups: 54,
+  },
+];
+
+export function detectionGroup(number, rule = RULES[0], refs = ['1:1', '1:2', '1:3']) {
+  return {
+    group_id: `${rule.rule_id}:${1000 + number}:2026-09-13T08:39:49.545Z`,
+    rule_id: rule.rule_id,
+    rule_name: rule.rule_name,
+    severity: rule.severity,
+    confidence: rule.confidence,
+    match_key: 'process_id',
+    match_value: String(1000 + number),
+    time_window_seconds: rule.time_window_seconds,
+    window_start: '2026-09-13T08:39:49.545Z',
+    window_end: '2026-09-13T08:39:54.545Z',
+    event_count: refs.length,
+    why: {
+      basis: 'derived',
+      text: `For process ID ${1000 + number}, the recorded events satisfy rule ${rule.rule_id}.`,
+      steps: rule.steps.map((step) => ({ event_type: step.event_type, required: step.min_count, found: step.min_count })),
+    },
+    interpretation: { basis: 'derived', text: `The recorded events match the pattern of ${rule.rule_name}. A matching pattern alone does not show the purpose of the activity.` },
+    evidence: { event_ids: refs.map((_, index) => index + 1), raw_event_refs: refs },
+  };
+}
+
+export const DETECTIONS = {
+  analysed: true,
+  rules: RULES,
+  counts: { total_groups: 73, by_rule: { 'RAVEN-R001': 19, 'RAVEN-R003': 54 }, by_severity: { HIGH: 73 } },
+  groups: [detectionGroup(1), detectionGroup(2, RULES[2], ['1:10', '1:11'])],
+  total: 73,
+  page: 1,
+  page_size: 20,
+};
+
+const chainEntry = (number, rule, events) => ({
+  group_id: detectionGroup(number, rule).group_id,
+  rule_id: rule.rule_id,
+  rule_name: rule.rule_name,
+  severity: rule.severity,
+  match_value: String(1000 + number),
+  start_time: `2026-09-13T08:39:${40 + number}.545Z`,
+  end_time: `2026-09-13T08:39:${45 + number}.545Z`,
+  event_count: events.length,
+  events,
+  interpretation: { basis: 'derived', text: `Interpretation of group ${number}.` },
+});
+
+const anEvent = (id, type, text) => ({ event_id: id, raw_event_ref: `1:${id}`, timestamp: `2026-09-13T08:39:49.${500 + id}Z`, event_type: type, description: text });
+
+export function chainOf(count) {
+  return Array.from({ length: count }, (_, index) => chainEntry(index + 1, index % 2 === 0 ? RULES[0] : RULES[2], [anEvent(index + 1, 'file_create', `File created: C:\\Temp\\file_${index}.txt`)]));
+}
+
+const node = (guid, pid, image, extra = {}) => ({
+  process_guid: guid,
+  process_id: pid,
+  image,
+  user: 'LAB\\tester',
+  parent_process_guid: null,
+  parent_process_id: null,
+  parent_image: null,
+  first_seen: '2026-09-13T08:39:49.545Z',
+  last_seen: '2026-09-13T08:43:09.488Z',
+  event_counts: { file_create: 20 },
+  group_ids: ['g1', 'g2'],
+  in_session: true,
+  basis: 'observed',
+  child_guids: [],
+  ...extra,
+});
+
+export const SESSION = {
+  session_id: 'RAVEN-SESSION-LAB-R001-1001',
+  computer: 'LAB-HOST',
+  start_time: '2026-09-13T08:39:49.545Z',
+  end_time: '2026-09-13T08:43:09.488Z',
+  duration_ms: 199943,
+  severity: 'HIGH',
+  confidence: null,
+  description: 'Reconstructed attack session containing 3 correlation group(s) from rule(s): RAVEN-R001, RAVEN-R003.',
+  group_count: 3,
+  rule_ids: ['RAVEN-R001', 'RAVEN-R003'],
+  chain: [
+    chainEntry(1, RULES[0], [anEvent(1, 'process_creation', 'Process created: C:\\Test\\a.exe (PID 1001)'), anEvent(2, 'file_create', 'File created: C:\\Temp\\one.txt')]),
+    chainEntry(2, RULES[2], [anEvent(3, 'file_create', 'File created: C:\\Temp\\two.txt')]),
+    chainEntry(3, RULES[2], [anEvent(4, 'file_create', 'File created: C:\\Temp\\three.txt')]),
+  ],
+  process_tree: {
+    nodes: [
+      node('{P1}', 1001, 'C:\\Test\\a.exe', { parent_process_guid: '{P0}', child_guids: ['{P2}'] }),
+      node('{P0}', 900, 'C:\\Windows\\explorer.exe', { in_session: false, first_seen: null, last_seen: null, user: null, event_counts: {}, group_ids: [], child_guids: ['{P1}'] }),
+      node('{P2}', 1002, 'C:\\Windows\\System32\\cmd.exe', { parent_process_guid: '{P1}', event_counts: { process_creation: 1 }, group_ids: ['g3'] }),
+    ],
+    roots: ['{P0}'],
+  },
+};
+
+export const RECONSTRUCTION = { sessions: [SESSION] };
+
+export const EVENT_DETAIL = {
+  raw_event_ref: '1:1',
+  event: {
+    id: 1,
+    raw_event_ref: '1:1',
+    event_id: 1,
+    event_type: 'process_creation',
+    timestamp: '2026-09-13T08:39:49.545Z',
+    computer: 'LAB-HOST',
+    process_id: 1001,
+    process_name: 'C:\\Test\\a.exe',
+    command_line: 'a.exe --run',
+    hash_md5: null,
+    normalization_status: 'OK',
+  },
+  raw: { event_id: 1, time_created: '2026-09-13 08:39:49.545000+00:00', computer: 'LAB-HOST', record_id: 1, event_data: { ProcessId: '1001', Image: 'C:\\Test\\a.exe' } },
+  raw_xml: '<Event><System><EventID>1</EventID></System></Event>',
+  groups: [{ group_id: 'RAVEN-R001:1001:2026-09-13T08:39:49.545Z', rule_id: 'RAVEN-R001', basis: 'derived' }],
+  timeline: { session_id: 'RAVEN-SESSION-LAB-R001-1001', sequence_number: 4, description: 'Process created: C:\\Test\\a.exe' },
+};

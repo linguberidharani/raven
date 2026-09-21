@@ -15,3 +15,7 @@ export const startAnalysis = (id) => post(`${base(id)}/analysis`);
 
 export const getCollector = (id, signal) => get(`${base(id)}/collector`, { signal });
 export const linkCollectorFile = (id, sourceName) => post(`${base(id)}/collector`, { source_name: sourceName });
+
+export const getDetections = (id, params, signal) => get(`${base(id)}/detections`, { params, signal });
+export const getReconstruction = (id, signal) => get(`${base(id)}/reconstruction`, { signal });
+export const getEvent = (id, ref, signal) => get(`${base(id)}/events/${ref}`, { signal });

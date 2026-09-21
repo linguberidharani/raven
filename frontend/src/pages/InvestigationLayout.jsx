@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
 import { updateInvestigation } from '../api/investigations';
 import { SeverityBadge, StatusBadge } from '../components/Badge';
+import { EventPanelProvider } from '../components/EventPanel';
 import { InvestigationTabs } from '../components/InvestigationTabs';
 import { EmptyState, ErrorBanner, Skeleton } from '../components/States';
 import { useCase } from '../cases/CaseContext';
@@ -110,7 +111,9 @@ function Body() {
   return (
     <div className="page">
       <Header investigation={investigation} reload={reload} />
-      <Outlet />
+      <EventPanelProvider investigationId={investigation.id}>
+        <Outlet />
+      </EventPanelProvider>
     </div>
   );
 }
