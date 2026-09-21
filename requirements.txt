@@ -14,6 +14,11 @@ python-evtx>=0.8.1
 #     Verify:  python -c "import sqlalchemy; print('sqlalchemy', sqlalchemy.__version__)"
 SQLAlchemy>=2.0
 #
+# S5: PyYAML reads the correlation rule files (raven.correlation.rule_schema). Only yaml.safe_load is used.
+#     Install: python -m pip install -r requirements.txt
+#     Verify:  python -c "import yaml; print('PyYAML', yaml.__version__)"
+PyYAML>=6.0
+#
 # Planned (not installed yet, confirmed at each stage):
-#   PyYAML (rules), FastAPI, Uvicorn, pydantic, pydantic-settings, python-dotenv,
+#   FastAPI, Uvicorn, pydantic, pydantic-settings, python-dotenv,
 #   argon2-cffi (password hashing), python-multipart (uploads)

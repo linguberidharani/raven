@@ -1,0 +1,14 @@
+rule_id: "RAVEN-R002"
+rule_name: "Process Network File Stager Pattern"
+description: "A process is created, then makes a network connection, then a file creation event follows, all for the same process ID within 120 seconds. This describes observed events only; it does not show the purpose of the process."
+steps:
+  - event_type: "process_creation"
+    min_count: 1
+  - event_type: "network_connection"
+    min_count: 1
+  - event_type: "file_create"
+    min_count: 1
+match_key: "process_id"
+time_window_seconds: 120
+severity: "MEDIUM"
+confidence: 75

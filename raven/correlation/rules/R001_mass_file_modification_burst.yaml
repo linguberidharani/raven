@@ -1,0 +1,12 @@
+rule_id: "RAVEN-R001"
+rule_name: "Mass File Modification Burst"
+description: "A process is created and, within 60 seconds, five or more file creation events are recorded for the same process ID. This describes observed events only; it does not show the purpose of the process."
+steps:
+  - event_type: "process_creation"
+    min_count: 1
+  - event_type: "file_create"
+    min_count: 5
+match_key: "process_id"
+time_window_seconds: 60
+severity: "HIGH"
+confidence: 85

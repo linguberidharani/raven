@@ -1,0 +1,10 @@
+rule_id: "RAVEN-R003"
+rule_name: "Sustained File Creation Burst"
+description: "Ten or more file creation events are recorded for the same process ID within 120 seconds. This describes observed events only; it does not show the purpose of the process."
+steps:
+  - event_type: "file_create"
+    min_count: 10
+match_key: "process_id"
+time_window_seconds: 120
+severity: "HIGH"
+confidence: 90
