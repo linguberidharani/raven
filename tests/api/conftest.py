@@ -81,3 +81,15 @@ def run_analysis(app, client, investigation_id, timeout=60):
     final = client.get(f"/api/investigations/{investigation_id}/analysis")
     assert final.status_code == 200
     return final.json()
+
+
+def analysed_case(app, client, title="Boot activity"):
+    """An investigation with one synthetic evidence file and a completed analysis run (a fake loader replaces the EVTX reader)."""
+    from tests.synthetic import fake_loader
+
+    app.state.runs.loader = fake_loader()
+    investigation = make_investigation(client, title)
+    assert upload_evtx(client, investigation["id"], salt=investigation["id"]).status_code == 201
+    run = run_analysis(app, client, investigation["id"])
+    assert run["status"] == "completed", run
+    return investigation

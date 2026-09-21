@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from raven.config import Settings
-from raven.database.registry_models import AnalysisRun, EvidenceSource, Investigation
+from raven.database.registry_models import AnalysisRun, EvidenceSource, Investigation, User
 from raven.reconstruction.sequencer import SEVERITY_ORDER
 from raven.services.clock import iso, utc_now
 from raven.services.errors import ServiceError
@@ -189,3 +189,31 @@ def latest_run(registry: Session, investigation_id: int) -> AnalysisRun | None:
 
 def evidence_count(registry: Session, investigation_id: int) -> int:
     return registry.scalar(select(func.count()).select_from(EvidenceSource).where(EvidenceSource.investigation_id == investigation_id)) or 0
+
+
+def investigation_view(registry: Session, settings: Settings, row: Investigation) -> dict[str, Any]:
+    """The investigation as the API shows it: stored fields plus the derived severity, stage and counts."""
+    workspace = resolve_workspace(settings.resolved_data_dir, row.workspace_dir)
+    facts = workspace_facts(workspace)
+    run = latest_run(registry, row.id)
+    analyst = registry.get(User, row.analyst_id)
+    return {
+        "id": row.id,
+        "code": row.code,
+        "title": row.title,
+        "description": row.description,
+        "host": row.host,
+        "status": row.status,
+        "severity": facts.severity,
+        "stage": run.stage if run else None,
+        "analysis_status": run.status if run else None,
+        "analyst": {"id": analyst.id, "name": analyst.name},
+        "counts": {
+            "evidence": evidence_count(registry, row.id),
+            "detections": facts.detections,
+            "sessions": facts.sessions,
+            "timeline_events": facts.timeline_events,
+        },
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }

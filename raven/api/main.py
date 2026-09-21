@@ -28,6 +28,7 @@ from raven.api.errors import REQUEST_ID_HEADER, error_response, install_error_ha
 from raven.api.routes import auth as auth_routes
 from raven.api.routes import health as health_routes
 from raven.api.routes import investigations as investigation_routes
+from raven.api.routes import read as read_routes
 from raven.config import Settings, get_settings
 from raven.database.session import open_registry_database
 from raven.logging_config import configure_logging
@@ -95,6 +96,7 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     app.include_router(health_routes.router)
     app.include_router(auth_routes.router)
     app.include_router(investigation_routes.router)
+    app.include_router(read_routes.router)
     return app
 
 

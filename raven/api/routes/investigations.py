@@ -31,31 +31,7 @@ InvestigationId = Path(ge=1, description="Numeric investigation ID")
 SEVERITIES = ("HIGH", "MEDIUM", "LOW", "INFO")
 
 
-def investigation_out(registry: Session, settings: Settings, row: Investigation) -> dict[str, Any]:
-    workspace = resolve_workspace(settings.resolved_data_dir, row.workspace_dir)
-    facts = investigation_service.workspace_facts(workspace)
-    run = investigation_service.latest_run(registry, row.id)
-    analyst = registry.get(User, row.analyst_id)
-    return {
-        "id": row.id,
-        "code": row.code,
-        "title": row.title,
-        "description": row.description,
-        "host": row.host,
-        "status": row.status,
-        "severity": facts.severity,
-        "stage": run.stage if run else None,
-        "analysis_status": run.status if run else None,
-        "analyst": {"id": analyst.id, "name": analyst.name},
-        "counts": {
-            "evidence": investigation_service.evidence_count(registry, row.id),
-            "detections": facts.detections,
-            "sessions": facts.sessions,
-            "timeline_events": facts.timeline_events,
-        },
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
-    }
+investigation_out = investigation_service.investigation_view
 
 
 @router.post("", status_code=201, response_model=InvestigationOut)
