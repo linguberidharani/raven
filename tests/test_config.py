@@ -25,6 +25,7 @@ def test_defaults():
     assert (s.env, s.host, s.port, s.log_level) == ("development", "127.0.0.1", 8000, "INFO")
     assert s.data_dir == Path("data")
     assert (s.max_upload_mb, s.session_hours, s.cookie_secure) == (200, 12, False)
+    assert s.inbox_dir == Path("data/inbox") and s.inbox_poll_seconds == 5
 
 
 def test_environment_variables_override_the_defaults(monkeypatch):
@@ -71,6 +72,18 @@ def test_paths_are_resolved_against_the_project_root(tmp_path):
     assert settings().resolved_data_dir == PROJECT_ROOT / "data"
     assert settings(data_dir=tmp_path).resolved_data_dir == tmp_path
     assert settings(data_dir=tmp_path).registry_path == tmp_path / "registry.db"
+
+
+def test_the_inbox_folder_is_resolved_against_the_project_root(tmp_path):
+    assert settings().resolved_inbox_dir == PROJECT_ROOT / "data" / "inbox"
+    assert settings(inbox_dir=tmp_path / "in").resolved_inbox_dir == tmp_path / "in"
+
+
+@pytest.mark.parametrize("value", [-1, 3601])
+def test_the_poll_interval_is_checked(value):
+    with pytest.raises(ValidationError):
+        settings(inbox_poll_seconds=value)
+    assert settings(inbox_poll_seconds=0).inbox_poll_seconds == 0
 
 
 def test_derived_values():

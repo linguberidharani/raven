@@ -1,7 +1,7 @@
 # RAVEN API contract
 
 Written from the real code. Contract tests in `tests\api` enforce the shapes below. The endpoints of later stages
-(S14 collector and inbox, later stages) are added here at the start of the stage that builds them.
+(later stages) are added here at the start of the stage that builds them.
 
 ## Conventions
 
@@ -30,6 +30,9 @@ Every error has this shape (no request body is ever echoed back):
 | 404 | `not_found` | unknown route |
 | 405 | `method_not_allowed` | wrong HTTP method |
 | 404 | `investigation_not_found` | no investigation with this ID |
+| 404 | `inbox_file_not_found` | linking a file that is not in the inbox |
+| 409 | `source_already_linked` | the inbox file is already linked to an investigation |
+| 422 | `invalid_source_name` | a source name is not a plain `.jsonl` file name |
 | 404 | `not_analysed` | RARF or report asked for, but no analysis has produced sessions yet |
 | 404 | `session_not_found` | the `session` query names no attack session of the investigation |
 | 404 | `rarf_not_found`, `report_not_found` | the file of the session is missing; run the analysis again |
@@ -379,3 +382,48 @@ Response: the RARF v1.0 document of the session exactly as written by the pipeli
 
 Query: `session` (default the first session). Response: the report document (see the report generator). Its content is
 deterministic; only `generated_at` is set at the time of the request. Errors as for the RARF.
+
+## Endpoints (stage S14): inbox and collector
+
+The VM collector appends raw records (one JSON object per line, spec 6.1) to a file in the inbox folder
+(`RAVEN_INBOX_DIR`, default `data\inbox`, the shared folder of the VM). An analyst links such a file to an investigation.
+The inbox watcher then reads the new complete lines every `RAVEN_INBOX_POLL_SECONDS` seconds (0 switches it off), adds
+the new records to the raw file of the evidence source, and starts an analysis run for the investigation. Records that
+are already known (same record ID and time) are never added twice. While an analysis run of the investigation is
+active, new data waits in the inbox file; the next look after the run picks it up.
+
+All of these need a signed-in user.
+
+### GET /api/inbox
+
+`{ "items": [ { "source_name": "sysmon-Dharani.jsonl", "size_bytes": 1234, "modified_at": "...", "investigation_id": 1, "investigation_code": "INV-2026-001" } ] }`.
+The files of the inbox folder whose names are plain `.jsonl` names; `investigation_id` and `investigation_code` are `null`
+for a file that is not linked.
+
+### POST /api/inbox/poll
+
+Looks at the inbox now. Response `200`:
+
+```json
+{
+  "results": [ { "source_name": "sysmon-Dharani.jsonl", "investigation_id": 1, "records_added": 250, "rejected": 0, "offset": 190345, "error": null, "skipped": null } ],
+  "analyses_started": [1]
+}
+```
+
+`records_added` counts records that were new; `rejected` counts lines that were not valid raw records; `offset` is the read
+position; `error` says why a file could not be read; `skipped` says why a file was left for the next look (an analysis run
+was active). `analyses_started` lists the investigations for which a run was started.
+
+### GET /api/investigations/{id}/collector
+
+`{ "items": [ { "source_name", "evidence_id", "last_offset", "last_record_id", "updated_at", "status", "events_total", "error" } ] }`:
+the inbox files linked to the investigation with their read position. `status` is the status of the evidence source
+(`uploaded` means that there is data that has not been analysed yet).
+
+### POST /api/investigations/{id}/collector
+
+Request (unknown fields are rejected): `{ "source_name": "sysmon-Dharani.jsonl" }`. Response `201`: the evidence item
+(see the evidence list) with `source_type` `vm_collector`, `filename` the source name, `size_bytes` the bytes read so far,
+`sha256` the hash of the bytes read so far, `events_total` the number of records taken over. Errors:
+`422 invalid_source_name`, `404 inbox_file_not_found`, `409 source_already_linked`, `404 investigation_not_found`.

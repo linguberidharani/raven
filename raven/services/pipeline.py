@@ -62,11 +62,16 @@ StageCallback = Callable[[str, str, "dict[str, Any] | None", "str | None"], None
 
 @dataclass(frozen=True)
 class EvidenceInfo:
-    """An evidence file of the run. ready + events_total let an already collected file be reused."""
+    """An evidence file of the run. ready + events_total let an already collected file be reused.
+
+    A vm_collector source has no EVTX file: the inbox watcher keeps its raw JSONL file up to date, so it is always
+    "collected" and only counted.
+    """
 
     id: int
     ready: bool = False
     events_total: int = 0
+    source_type: str = "evtx_upload"
 
 
 class PipelineError(Exception):
@@ -75,6 +80,13 @@ class PipelineError(Exception):
         self.stage = stage
         self.message = message
         self.evidence_id = evidence_id
+
+
+def _count_lines(path: Path) -> int:
+    if not path.is_file():
+        return 0
+    with open(path, "r", encoding="utf-8", newline="\n") as handle:
+        return sum(1 for line in handle if line.strip())
 
 
 def _lines(paths: list[Path]) -> Iterator[str]:
@@ -113,7 +125,9 @@ def run_full_pipeline(
         for item in ordered:
             current["evidence_id"] = item.id
             raw = workspace.raw_path(item.id)
-            if item.ready and raw.is_file():
+            if item.source_type == "vm_collector":
+                collected.append({"evidence_id": item.id, "records": _count_lines(raw), "reused": True})
+            elif item.ready and raw.is_file():
                 collected.append({"evidence_id": item.id, "records": item.events_total, "reused": True})
             else:
                 collected.append({"evidence_id": item.id, "records": loader(workspace.evidence_path(item.id), raw), "reused": False})
@@ -125,7 +139,8 @@ def run_full_pipeline(
         total = 0
         statuses: Counter[str] = Counter()
         types: Counter[str] = Counter()
-        for item in ordered:
+        with_raw = [item for item in ordered if workspace.raw_path(item.id).is_file()]
+        for item in with_raw:
             summary = normalize_all(workspace.raw_path(item.id), workspace.normalized_path(item.id), item.id)
             total += summary["total"]
             statuses.update(summary["status_counts"])
@@ -134,7 +149,7 @@ def run_full_pipeline(
 
         # ------------------------------------------------------------ deduplicate
         begin("deduplicate")
-        write_lines_atomic(workspace.combined_normalized_path, _lines([workspace.normalized_path(item.id) for item in ordered]))
+        write_lines_atomic(workspace.combined_normalized_path, _lines([workspace.normalized_path(item.id) for item in with_raw]))
         outcome = deduplicate(workspace.combined_normalized_path, workspace.deduplicated_path, workspace.duplicates_path)
         finish("deduplicate", {"input": outcome.input_count, "unique": outcome.unique_count, "removed": outcome.removed_count})
 

@@ -27,6 +27,7 @@ import raven
 from raven.api.errors import REQUEST_ID_HEADER, error_response, install_error_handlers
 from raven.api.routes import auth as auth_routes
 from raven.api.routes import health as health_routes
+from raven.api.routes import inbox as inbox_routes
 from raven.api.routes import investigations as investigation_routes
 from raven.api.routes import read as read_routes
 from raven.config import Settings, get_settings
@@ -34,6 +35,7 @@ from raven.database.session import open_registry_database
 from raven.logging_config import configure_logging
 from raven.services.analysis_runs import AnalysisRunManager
 from raven.services.auth import AuthService
+from raven.services.inbox import InboxWatcher
 
 logger = logging.getLogger("raven.api")
 
@@ -47,13 +49,16 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     registry_factory = open_registry_database(settings.registry_path)
 
     runs = AnalysisRunManager(registry_factory, settings)
+    watcher = InboxWatcher(registry_factory, settings, runs)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         interrupted = runs.recover_interrupted()
         if interrupted:
             logger.warning("%s analysis run(s) were interrupted by the last shutdown and are marked failed", interrupted)
+        watcher.start()
         yield
+        watcher.stop()
         registry_factory.kw["bind"].dispose()
 
     app = FastAPI(
@@ -68,6 +73,7 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     app.state.registry_factory = registry_factory
     app.state.auth = AuthService(password_hasher, settings.session_hours)
     app.state.runs = runs
+    app.state.inbox = watcher
 
     @app.middleware("http")
     async def request_context(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
@@ -97,6 +103,7 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     app.include_router(auth_routes.router)
     app.include_router(investigation_routes.router)
     app.include_router(read_routes.router)
+    app.include_router(inbox_routes.router)
     return app
 
 

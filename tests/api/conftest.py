@@ -22,6 +22,8 @@ def clean_environment(monkeypatch):
 
 def make_settings(tmp_path, **values):
     values.setdefault("env", "test")
+    values.setdefault("inbox_dir", tmp_path / "inbox")
+    values.setdefault("inbox_poll_seconds", 0)
     return Settings(_env_file=None, data_dir=tmp_path / "data", log_level="WARNING", **values)
 
 

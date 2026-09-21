@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     max_upload_mb: int = Field(default=200, ge=1, le=10_000)
     session_hours: int = Field(default=12, ge=1, le=24 * 30)
     cookie_secure: bool = False
+    inbox_dir: Path = Path("data/inbox")
+    inbox_poll_seconds: int = Field(default=5, ge=0, le=3600)
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -54,6 +56,11 @@ class Settings(BaseSettings):
     @property
     def resolved_data_dir(self) -> Path:
         path = self.data_dir
+        return path if path.is_absolute() else PROJECT_ROOT / path
+
+    @property
+    def resolved_inbox_dir(self) -> Path:
+        path = self.inbox_dir
         return path if path.is_absolute() else PROJECT_ROOT / path
 
     @property

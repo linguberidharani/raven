@@ -178,5 +178,27 @@ def test_the_document_names_the_error_codes_the_api_uses():
         "not_authenticated", "invalid_credentials", "email_already_registered", "validation_error", "investigation_not_found", "duplicate_evidence",
         "no_evidence", "analysis_already_running", "file_too_large", "payload_too_large", "invalid_file_type", "invalid_filename", "invalid_evtx",
         "not_analysed", "session_not_found", "rarf_not_found", "report_not_found", "event_not_found", "raw_record_not_found", "internal_error",
+        "inbox_file_not_found", "source_already_linked", "invalid_source_name",
     ):
         assert f"`{code}`" in text, code
+
+
+def test_the_inbox_shapes(app, client, tmp_path):
+    from tests.api.conftest import make_investigation
+    from tests.synthetic import raw_lines, synthetic_raw_records
+
+    register_and_login(client)
+    investigation = make_investigation(client)
+    inbox = app.state.settings.resolved_inbox_dir
+    inbox.mkdir(parents=True, exist_ok=True)
+    (inbox / "s.jsonl").write_text(raw_lines(synthetic_raw_records(1)[:2]), encoding="utf-8")
+    listing = shape(client.get("/api/inbox").json())
+    assert listing == {"items": [{"source_name": None, "size_bytes": None, "modified_at": None, "investigation_id": None, "investigation_code": None}]}
+    linked = client.post(f"/api/investigations/{investigation['id']}/collector", json={"source_name": "s.jsonl"})
+    assert set(linked.json()) == {"id", "investigation_id", "filename", "sha256", "size_bytes", "source_type", "status", "events_total", "error", "created_at", "ingested_at"}
+    sources = shape(client.get(f"/api/investigations/{investigation['id']}/collector").json())
+    assert sources == {"items": [{"source_name": None, "evidence_id": None, "last_offset": None, "last_record_id": None, "updated_at": None, "status": None, "events_total": None, "error": None}]}
+    polled = shape(client.post("/api/inbox/poll").json())
+    assert set(polled) == {"results", "analyses_started"}
+    assert set(polled["results"][0]) == {"source_name", "investigation_id", "records_added", "rejected", "offset", "error", "skipped"}
+    app.state.runs.wait(1, 60)

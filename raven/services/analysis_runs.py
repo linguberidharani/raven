@@ -155,7 +155,8 @@ class AnalysisRunManager:
                 )
             )
             previous = {item.id: item.status for item in evidence}
-            infos = [EvidenceInfo(item.id, item.status == "ready", item.events_total) for item in evidence]
+            infos = [EvidenceInfo(item.id, item.status == "ready", item.events_total, item.source_type) for item in evidence]
+            snapshot = {item.id: item.events_total for item in evidence}
             for item in evidence:
                 item.status = "processing"
             run.status = "running"
@@ -194,9 +195,13 @@ class AnalysisRunManager:
         finished = utc_now_iso()
         with self._factory() as registry:
             for item in registry.scalars(select(EvidenceSource).where(EvidenceSource.id.in_(list(previous)))):
-                item.status = "ready"
-                item.events_total = counts.get(item.id, item.events_total)
-                item.error = None
+                if item.source_type == "vm_collector":
+                    # new records that arrived during the run stay "uploaded" so that the next run picks them up
+                    item.status = "ready" if item.events_total == snapshot.get(item.id) else "uploaded"
+                else:
+                    item.status = "ready"
+                    item.events_total = counts.get(item.id, item.events_total)
+                    item.error = None
                 item.ingested_at = finished
             run = registry.get(AnalysisRun, run_id)
             run.status = "completed"

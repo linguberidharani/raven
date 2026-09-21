@@ -95,3 +95,10 @@ def fake_loader(seed_of=None, failing_ids=()):
 
     loader.calls = []
     return loader
+
+
+def raw_lines(records) -> str:
+    """Raw records as the text a collector would append to its file (one JSON object per line, LF line ends)."""
+    from raven.collectors.raw_jsonl import serialize_record
+
+    return "".join(serialize_record(record) + "\n" for record in records)
