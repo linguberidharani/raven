@@ -185,3 +185,32 @@ export function fieldLabel(name) {
   const text = String(name).replace(/_/g, ' ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+const EVENT_ICONS = { process_creation: 'terminal', network_connection: 'globe', file_create: 'file' };
+
+export function eventTypeIcon(type) {
+  return EVENT_ICONS[type] ?? 'info';
+}
+
+const IMPACT_CATEGORIES = {
+  files_affected: 'Files affected',
+  network_activity: 'Network activity',
+  process_activity: 'Process activity',
+  unsupported_events: 'Unsupported events',
+};
+
+export function impactCategoryLabel(category) {
+  return IMPACT_CATEGORIES[category] ?? (typeof category === 'string' && category ? category.replace(/_/g, ' ') : 'Unknown');
+}
+
+/** "3 users, 16 processes, 1 computer" from the distinct_* counts of an impact category. */
+export function impactDetails(details) {
+  const parts = [];
+  const add = (count, one, many) => {
+    if (typeof count === 'number') parts.push(`${count} ${count === 1 ? one : many}`);
+  };
+  add(details?.distinct_computers, 'computer', 'computers');
+  add(details?.distinct_users, 'user', 'users');
+  add(details?.distinct_processes, 'process', 'processes');
+  return parts.length > 0 ? parts.join(', ') : '\u2014';
+}

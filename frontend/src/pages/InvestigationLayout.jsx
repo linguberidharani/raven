@@ -81,7 +81,7 @@ function Header({ investigation, reload }) {
   );
 }
 
-function Body() {
+function Body({ step }) {
   const { investigation, loading, error, reload } = useCase();
   if (error?.status === 404) {
     return (
@@ -112,7 +112,9 @@ function Body() {
     <div className="page">
       <Header investigation={investigation} reload={reload} />
       <EventPanelProvider investigationId={investigation.id}>
-        <Outlet />
+        <div className="route-fade" key={step}>
+          <Outlet />
+        </div>
       </EventPanelProvider>
     </div>
   );
@@ -123,5 +125,5 @@ export default function InvestigationLayout() {
   const { id, step } = useParams();
   const valid = /^\d+$/.test(id ?? '') && Number(id) >= 1 && (step === undefined || WORKFLOW.some((item) => item.key === step));
   if (!valid) return <NotFound />;
-  return <Body />;
+  return <Body step={step} />;
 }

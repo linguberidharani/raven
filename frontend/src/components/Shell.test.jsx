@@ -1,10 +1,20 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { vi, beforeEach, describe, expect, it } from 'vitest';
 import { DASHBOARD, INVESTIGATION, USER } from '../test/fixtures';
 import { caseRoutes } from '../test/routes';
 import { mockApi, notAuthenticated } from '../test/mockApi';
 import { renderApp } from '../test/render';
+
+// The chart library is large and slow to load on some machines; the page tests only need its text alternative.
+vi.mock('./ActivityChart', async () => {
+  const React = await import('react');
+  return {
+    default: ({ buckets, bucketSeconds }) =>
+      React.createElement('div', { role: 'img', 'aria-label': `Events over time in buckets of ${bucketSeconds} seconds, by event type. The data is also available as a table.` }, `${buckets.length} buckets`),
+  };
+});
+
 
 const signedIn = { 'GET /api/auth/me': { body: USER }, 'GET /api/dashboard': { body: DASHBOARD }, 'POST /api/auth/logout': { status: 204 } };
 
@@ -47,6 +57,7 @@ describe('the signed-in frame', () => {
     renderApp('/dashboard');
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
     expect(screen.getByText('Open an investigation to see its workflow.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Choose an investigation' })).toHaveAttribute('href', '/investigations');
     expect(screen.queryByRole('navigation', { name: 'Investigation workflow' })).not.toBeInTheDocument();
   });
 
@@ -67,6 +78,13 @@ describe('the signed-in frame', () => {
       ['evidence', 'detection', 'reconstruction', 'timeline', 'impact', 'rarf', 'report'].map((step) => `/investigations/7/${step}`),
     );
     expect(within(workflow).getByRole('link', { name: 'Attack Timeline' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('puts the step and the case in the tab title', async () => {
+    mockApi(caseRoutes({ ...INVESTIGATION, id: 7, code: 'INV-2026-007' }));
+    renderApp('/investigations/7/timeline');
+    await screen.findByRole('heading', { level: 1, name: 'Boot activity' });
+    await waitFor(() => expect(document.title).toBe('Attack Timeline \u00b7 INV-2026-007 | RAVEN'));
   });
 
   it('puts the code of the investigation in the breadcrumbs of the top bar', async () => {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../api/errors';
 import AuthLayout from '../components/AuthLayout';
@@ -10,6 +11,7 @@ import { PASSWORD_MAX, PASSWORD_MIN, validateRegister } from '../utils/validatio
 const FIELDS = ['name', 'email', 'organization', 'password'];
 
 export default function Register() {
+  useDocumentTitle('Create an account');
   const { register } = useAuth();
   const [values, setValues] = useState({ name: '', email: '', organization: '', password: '', confirm: '' });
   const [errors, setErrors] = useState({});

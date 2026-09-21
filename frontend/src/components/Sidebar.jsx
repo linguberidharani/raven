@@ -36,7 +36,9 @@ export function Sidebar({ open, onClose, onSignOut, id }) {
         </nav>
         <div className="nav-heading">Investigation workflow</div>
         {caseId === null ? (
-          <p className="nav-hint">Open an investigation to see its workflow.</p>
+          <p className="nav-hint">
+            Open an investigation to see its workflow. <Link to="/investigations">Choose an investigation</Link>
+          </p>
         ) : (
           <>
             <div className="case-card">

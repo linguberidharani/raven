@@ -1,5 +1,9 @@
+import { useCase } from '../cases/CaseContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+
 /** The title (the one h1 of the page) with an optional subtitle and actions. Breadcrumbs are in the top bar. */
 export function PageHeader({ title, subtitle, actions }) {
+  useDocumentTitle(title);
   return (
     <div className="page-header">
       <div className="page-header-row">
@@ -15,6 +19,8 @@ export function PageHeader({ title, subtitle, actions }) {
 
 /** The heading (h2) of one step of an investigation; the h1 of those pages is the investigation title. */
 export function SectionHeader({ title, subtitle, actions }) {
+  const { investigation } = useCase();
+  useDocumentTitle(investigation ? `${title} \u00b7 ${investigation.code}` : title);
   return (
     <div className="section-header">
       <div style={{ minWidth: 0 }}>

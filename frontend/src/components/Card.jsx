@@ -1,4 +1,5 @@
-import { formatNumber } from '../utils/format';
+import { CountUp } from './CountUp';
+import { Icon } from './Icons';
 
 export function Card({ title, actions, children, headingLevel = 2 }) {
   const Heading = `h${headingLevel}`;
@@ -15,12 +16,21 @@ export function Card({ title, actions, children, headingLevel = 2 }) {
   );
 }
 
-export function StatCard({ label, value, note }) {
+export function StatCard({ label, value, note, icon, tone = 'accent' }) {
   return (
-    <div className="stat-card">
-      <span className="stat-label">{label}</span>
-      <span className="stat-value">{typeof value === 'number' ? formatNumber(value) : value}</span>
-      {note ? <span className="stat-note">{note}</span> : null}
+    <div className={`stat-card${icon ? ' with-icon' : ''}`}>
+      {icon ? (
+        <span className={`stat-icon tone-${tone}`} aria-hidden="true">
+          <Icon name={icon} size={20} />
+        </span>
+      ) : null}
+      <span className="stat-body">
+        <span className="stat-label">{label}</span>
+        <span className="stat-value">
+          <CountUp value={value} />
+        </span>
+        {note ? <span className="stat-note">{note}</span> : null}
+      </span>
     </div>
   );
 }

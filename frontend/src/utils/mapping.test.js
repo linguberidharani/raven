@@ -137,3 +137,26 @@ describe('rule, path and field labels', () => {
     expect(fieldLabel('something_new')).toBe('Something new');
   });
 });
+
+import { eventTypeIcon, impactCategoryLabel, impactDetails } from './mapping';
+
+describe('timeline and impact labels', () => {
+  it('picks an icon per event type', () => {
+    expect(eventTypeIcon('process_creation')).toBe('terminal');
+    expect(eventTypeIcon('network_connection')).toBe('globe');
+    expect(eventTypeIcon('file_create')).toBe('file');
+    expect(eventTypeIcon('other')).toBe('info');
+  });
+  it('names the impact categories', () => {
+    expect(impactCategoryLabel('files_affected')).toBe('Files affected');
+    expect(impactCategoryLabel('unsupported_events')).toBe('Unsupported events');
+    expect(impactCategoryLabel('new_kind')).toBe('new kind');
+    expect(impactCategoryLabel(null)).toBe('Unknown');
+  });
+  it('describes the distinct counts', () => {
+    expect(impactDetails({ distinct_computers: 1, distinct_users: 3, distinct_processes: 16 })).toBe('1 computer, 3 users, 16 processes');
+    expect(impactDetails({ distinct_users: 0 })).toBe('0 users');
+    expect(impactDetails({})).toBe('\u2014');
+    expect(impactDetails(undefined)).toBe('\u2014');
+  });
+});

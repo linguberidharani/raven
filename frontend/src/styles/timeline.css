@@ -1,0 +1,233 @@
+/* Attack timeline */
+.timeline {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tl-minute {
+  margin: 22px 0 10px 118px;
+  padding-left: 14px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.tl-minute:first-child {
+  margin-top: 0;
+}
+
+.tl-item {
+  --type-color: var(--sev-info);
+  position: relative;
+  display: grid;
+  grid-template-columns: 100px 36px minmax(0, 1fr);
+  gap: 0 8px;
+  padding-bottom: 12px;
+}
+
+.tl-item::before {
+  content: '';
+  position: absolute;
+  left: 117px;
+  top: 30px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--border-strong);
+}
+
+.tl-item:last-child::before {
+  display: none;
+}
+
+.type-process_creation { --type-color: var(--accent); }
+.type-network_connection { --type-color: var(--observed); }
+.type-file_create { --type-color: var(--sev-medium); }
+
+.tl-time {
+  padding-top: 8px;
+  color: var(--text-2);
+  font-size: 0.86rem;
+  text-align: right;
+}
+
+.tl-node {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  color: var(--type-color);
+  background: var(--bg);
+  border: 2px solid var(--type-color);
+  border-radius: 50%;
+}
+
+.tl-card {
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--type-color);
+  border-radius: var(--radius-sm);
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.tl-card:hover {
+  border-color: var(--border-strong);
+  border-left-color: var(--type-color);
+}
+
+.tl-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.tl-type {
+  color: var(--type-color);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+.tl-text {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.tl-meta,
+.tl-groups {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--text-3);
+  font-size: 0.86rem;
+}
+
+.tl-groups {
+  margin-top: 8px;
+}
+
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  color: var(--derived);
+  border: 1px dashed rgba(167, 143, 243, 0.6);
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+/* Impact */
+.impact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.impact-card {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--observed);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.impact-card h4 {
+  font-size: 1rem;
+}
+
+.impact-count {
+  margin: 6px 0 2px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.impact-count .muted {
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.asset-list {
+  margin: 6px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.asset-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.86rem;
+}
+
+.asset-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.derived-card {
+  border-top: 3px dashed var(--derived);
+}
+
+.alt-table {
+  margin-top: 12px;
+}
+
+.alt-table summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch);
+  cursor: pointer;
+}
+
+.table-scroll {
+  max-height: 320px;
+  overflow: auto;
+}
+
+@media (max-width: 720px) {
+  .tl-item {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 0 10px;
+  }
+  .tl-time {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0 0 4px;
+    text-align: left;
+  }
+  .tl-node {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .tl-card {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .tl-item::before {
+    left: 15px;
+  }
+  .tl-minute {
+    margin-left: 42px;
+    padding-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-card {
+    transition: none;
+  }
+}

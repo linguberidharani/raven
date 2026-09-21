@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getHealth } from '../api/health';
 import { dataSource } from '../api/client';
 import { Card } from '../components/Card';
@@ -28,6 +29,8 @@ export default function Settings() {
             <dd>{dataSource() === 'demo' ? 'Demo data (not real telemetry)' : 'RAVEN backend (real data)'}</dd>
             <dt>Appearance</dt>
             <dd>Dark</dd>
+            <dt>Time</dt>
+            <dd>All timestamps are shown in UTC.</dd>
           </dl>
         </Card>
         <Card title="Backend status">
@@ -54,6 +57,9 @@ export default function Settings() {
       <Card title="Local interface state">
         <p className="muted">RAVEN keeps only small interface preferences in this browser. Clearing them does not touch any investigation or your account.</p>
         <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <Link className="btn btn-secondary" to="/">
+            Replay intro
+          </Link>
           <button type="button" className="btn btn-secondary" onClick={clear}>
             Clear local UI state
           </button>

@@ -66,7 +66,9 @@ function Frame() {
       </header>
       <Sidebar id="sidebar" open={open} onClose={close} onSignOut={signOut} />
       <main className="main" id="main" tabIndex={-1} ref={main}>
-        <Outlet />
+        <div className="route-fade" key={pathname.split('/').slice(0, 3).join('/')}>
+          <Outlet />
+        </div>
       </main>
     </div>
   );

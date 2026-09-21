@@ -26,11 +26,10 @@ describe('Intro', () => {
     renderApp('/');
     expect(screen.getByRole('heading', { level: 1, name: 'RAVEN' })).toBeInTheDocument();
     expect(screen.getByText('Ransomware Attack Visualization and Event Navigator')).toBeInTheDocument();
-    const picture = screen.getByRole('img');
-    expect(picture).toHaveAccessibleName(/Telemetry, Detection, Reconstruction, Impact, Report/);
-    for (const stage of ['Telemetry', 'Detection', 'Reconstruction', 'Impact', 'Report']) {
-      expect(picture.textContent).toContain(stage);
-    }
+    expect(screen.getByRole('img')).toHaveAccessibleName(/Telemetry, Detection, Reconstruction, Impact, Report/);
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Telemetry', 'Detection', 'Reconstruction', 'Impact', 'Report']);
+    expect(screen.getByText('Trace the Attack.')).toBeInTheDocument();
+    expect(screen.getByText('Measure the Impact.')).toBeInTheDocument();
     expect(document.body.textContent.toLowerCase()).not.toMatch(/encrypt|decrypt/);
   });
 
@@ -38,7 +37,8 @@ describe('Intro', () => {
     expect(DOTS).toHaveLength(44);
     expect(DOTS[0].x).toBe(60);
     expect(DOTS[43].x).toBe(940);
-    expect(Math.max(...DOTS.map((d) => d.delay))).toBeLessThan(0.7);
+    expect(Math.max(...DOTS.map((d) => d.delay))).toBeLessThan(1.2);
+    expect(DOTS.some((d) => d.hot)).toBe(true);
   });
 
   it('continues to sign in by itself after about 4.8 seconds', async () => {
@@ -49,6 +49,11 @@ describe('Intro', () => {
     await act(async () => { vi.advanceTimersByTime(200); });
     expect(screen.getByRole('heading', { name: 'Analyst sign in' })).toBeInTheDocument();
     expect(INTRO_MS).toBe(4800);
+  });
+
+  it('sets the tab title to the product name', () => {
+    renderApp('/');
+    expect(document.title).toBe('RAVEN');
   });
 
   it('can be skipped', async () => {

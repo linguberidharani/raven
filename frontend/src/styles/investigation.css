@@ -280,7 +280,36 @@
 
 .case-link {
   font-weight: 500;
-  color: var(--text);
+  color: var(--accent);
+}
+
+.case-link:hover {
+  text-decoration: underline;
+}
+
+.row-link {
+  cursor: pointer;
+}
+
+.row-link:hover td {
+  background: var(--surface-2);
+}
+
+.row-link-item:hover {
+  background: rgba(23, 32, 46, 0.5);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.table td.open-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table td.mono {
+  overflow-wrap: anywhere;
 }
 
 .pagination {
@@ -466,6 +495,9 @@
     padding: 4px 0;
     border: 0;
     text-align: right;
+  }
+  .table-stack td.open-cell {
+    justify-content: flex-end;
   }
   .table-stack td::before {
     content: attr(data-label);

@@ -236,11 +236,18 @@ export default function Investigations() {
                 <th scope="col" className="num">Evidence</th>
                 <th scope="col" className="num">Detections</th>
                 <th scope="col">Updated (UTC)</th>
+                <th scope="col"><span className="sr-only">Open</span></th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((item) => (
-                <tr key={item.id}>
+                <tr
+                  key={item.id}
+                  className="row-link"
+                  onClick={(event) => {
+                    if (!event.target.closest('a, button')) navigate(investigationPath(item.id, 'evidence'));
+                  }}
+                >
                   <td data-label="Case">
                     <Link to={investigationPath(item.id, 'evidence')} className="case-link">
                       {item.title}
@@ -253,7 +260,12 @@ export default function Investigations() {
                   <td data-label="Analysis"><AnalysisCell status={item.analysis_status} /></td>
                   <td data-label="Evidence" className="num">{formatNumber(item.counts.evidence)}</td>
                   <td data-label="Detections" className="num">{formatNumber(item.counts.detections)}</td>
-                  <td data-label="Updated (UTC)">{formatTimestamp(item.updated_at)}</td>
+                  <td data-label="Updated (UTC)" className="nowrap">{formatTimestamp(item.updated_at)}</td>
+                  <td data-label="" className="open-cell">
+                    <Link className="btn btn-secondary small" to={investigationPath(item.id, 'evidence')} aria-label={`Open ${item.title}`}>
+                      Open <Icon name="arrow" size={16} />
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

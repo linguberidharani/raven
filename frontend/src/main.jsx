@@ -14,6 +14,9 @@ import './styles/auth.css';
 import './styles/intro.css';
 import './styles/investigation.css';
 import './styles/analysis.css';
+import './styles/timeline.css';
+import './styles/report.css';
+import './styles/polish.css';
 import App from './App';
 
 createRoot(document.getElementById('root')).render(

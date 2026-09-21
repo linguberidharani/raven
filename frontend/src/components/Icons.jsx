@@ -106,6 +106,21 @@ const PATHS = {
     </>
   ),
   check: <path d="M4 12l5 5L20 6" />,
+  folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3z M3 10h18l-1.500 8a2 2 0 0 1-2 1.600H6.500a2 2 0 0 1-2-1.600z" />,
+  terminal: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7 10l3 2-3 2" />
+      <path d="M13 15h4" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.500 5.600 12 3z" />
+    </>
+  ),
   arrow: (
     <>
       <path d="M5 12h14" />

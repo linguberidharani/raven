@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../api/errors';
 import AuthLayout from '../components/AuthLayout';
@@ -16,6 +17,7 @@ export function messageForLoginError(error) {
 }
 
 export default function Login() {
+  useDocumentTitle('Sign in');
   const { login } = useAuth();
   const [values, setValues] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});

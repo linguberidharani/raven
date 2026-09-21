@@ -22,7 +22,7 @@ describe('demo mode', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Demo data, not real telemetry.');
     expect(document.body).toHaveClass('has-demo-banner');
-    expect(await screen.findByText('DEMO-001')).toBeInTheDocument();
+    expect(await screen.findByText(/DEMO-001/)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

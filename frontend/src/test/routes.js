@@ -1,4 +1,4 @@
-import { BREAKDOWN, DASHBOARD, DETECTIONS, EVENT_DETAIL, EVIDENCE_ITEM, HEALTH, INVESTIGATION, RECONSTRUCTION, USER } from './fixtures';
+import { BREAKDOWN, DASHBOARD, DETECTIONS, EVENT_DETAIL, EVIDENCE_ITEM, HEALTH, IMPACT, INVESTIGATION, RARF_DOC, RECONSTRUCTION, REPORT_DOC, RULES_ANSWER, TIMELINE, USER } from './fixtures';
 
 export const me = { 'GET /api/auth/me': { body: USER } };
 
@@ -14,6 +14,11 @@ export function caseRoutes(investigation = INVESTIGATION, overrides = {}) {
     [`GET ${base}/detections`]: { body: DETECTIONS },
     [`GET ${base}/reconstruction`]: { body: RECONSTRUCTION },
     [`GET ${base}/events/1:1`]: { body: EVENT_DETAIL },
+    [`GET ${base}/rarf`]: { body: RARF_DOC },
+    [`GET ${base}/report`]: { body: REPORT_DOC },
+    [`GET ${base}/timeline`]: { body: TIMELINE },
+    [`GET ${base}/impact`]: { body: IMPACT },
+    'GET /api/rules': { body: RULES_ANSWER },
     'GET /api/inbox': { body: { items: [] } },
     'GET /api/dashboard': { body: DASHBOARD },
     'GET /api/health': { body: HEALTH },

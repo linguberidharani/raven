@@ -19,3 +19,12 @@ export const linkCollectorFile = (id, sourceName) => post(`${base(id)}/collector
 export const getDetections = (id, params, signal) => get(`${base(id)}/detections`, { params, signal });
 export const getReconstruction = (id, signal) => get(`${base(id)}/reconstruction`, { signal });
 export const getEvent = (id, ref, signal) => get(`${base(id)}/events/${ref}`, { signal });
+
+export const getTimeline = (id, params, signal) => get(`${base(id)}/timeline`, { params, signal });
+export const getImpact = (id, signal) => get(`${base(id)}/impact`, { signal });
+
+export const getRarf = (id, params, signal) => get(`${base(id)}/rarf`, { params, signal });
+export const getReport = (id, params, signal) => get(`${base(id)}/report`, { params, signal });
+
+/** The RARF as a file download (the server sends it with a file name). */
+export const rarfDownloadUrl = (id, session) => `${base(id)}/rarf?download=true${session ? `&session=${encodeURIComponent(session)}` : ''}`;

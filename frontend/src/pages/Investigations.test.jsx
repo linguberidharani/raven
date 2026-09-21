@@ -16,7 +16,7 @@ describe('Investigations list', () => {
     renderApp('/investigations');
     expect(await screen.findByRole('heading', { level: 1, name: 'Investigations' })).toBeInTheDocument();
     const table = await screen.findByRole('table', { name: 'Investigations' });
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Case', 'Host', 'Severity', 'Status', 'Analysis', 'Evidence', 'Detections', 'Updated (UTC)']);
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Case', 'Host', 'Severity', 'Status', 'Analysis', 'Evidence', 'Detections', 'Updated (UTC)', 'Open']);
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(2);
     expect(within(rows[0]).getByRole('link', { name: 'Live VM check' })).toHaveAttribute('href', '/investigations/2/evidence');
@@ -102,6 +102,34 @@ describe('Investigations list', () => {
     expect(alert).toHaveTextContent('req-7');
     await userEvent.setup().click(within(alert).getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('table')).toBeInTheDocument();
+  });
+});
+
+describe('opening an investigation', () => {
+  const two = { ...INVESTIGATION, id: 2, code: 'INV-2026-002', title: 'Live VM check' };
+
+  it('has an Open button and a title link in every row', async () => {
+    mockApi({ ...caseRoutes(two), 'GET /api/investigations': page([two]) });
+    renderApp('/investigations');
+    const row = within(await screen.findByRole('table', { name: 'Investigations' })).getAllByRole('row')[1];
+    expect(within(row).getByRole('link', { name: 'Open Live VM check' })).toHaveAttribute('href', '/investigations/2/evidence');
+    expect(within(row).getByRole('link', { name: 'Live VM check' })).toHaveAttribute('href', '/investigations/2/evidence');
+  });
+
+  it('opens the investigation when any other part of the row is clicked', async () => {
+    mockApi({ ...caseRoutes(two), 'GET /api/investigations': page([two]) });
+    renderApp('/investigations');
+    const row = within(await screen.findByRole('table', { name: 'Investigations' })).getAllByRole('row')[1];
+    await userEvent.setup().click(within(row).getByText('HOST-1'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Live VM check' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/investigations/2/evidence');
+  });
+
+  it('shows the tab titles of the pages', async () => {
+    mockApi(caseRoutes());
+    renderApp('/investigations');
+    await screen.findByRole('table');
+    expect(document.title).toBe('Investigations | RAVEN');
   });
 });
 

@@ -1,0 +1,222 @@
+/* RARF viewer */
+.json-tree {
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+}
+
+.json-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 6px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.json-toggle:hover {
+  background: var(--surface-2);
+}
+
+.json-toggle[aria-expanded='true'] .icon {
+  transform: rotate(90deg);
+}
+
+.json-children {
+  margin-left: 12px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+}
+
+.json-row {
+  padding: 2px 6px 2px 28px;
+  overflow-wrap: anywhere;
+}
+
+.json-key { color: var(--accent); }
+.json-string { color: var(--observed); }
+.json-number { color: var(--sev-medium); }
+.json-boolean,
+.json-null { color: var(--derived); }
+
+.json-raw {
+  max-height: 640px;
+  margin: 12px 0 0;
+  padding: 14px;
+  overflow: auto;
+  color: var(--text-2);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* Report */
+.report {
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.report-head {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-title {
+  margin: 4px 0 8px;
+  font-size: 1.7rem;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.toc ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: toc;
+}
+
+.toc li::before {
+  counter-increment: toc;
+  content: counter(toc) '. ';
+  color: var(--text-3);
+}
+
+.report-section {
+  margin-bottom: 32px;
+  scroll-margin-top: 72px;
+}
+
+.report-section h3 {
+  margin-bottom: 12px;
+  font-size: 1.25rem;
+}
+
+.finding {
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.finding.observed {
+  border-left-color: var(--observed);
+}
+
+.finding.derived {
+  border-left-color: var(--derived);
+  background: var(--surface-2);
+}
+
+.finding-basis {
+  margin-bottom: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.finding.observed .finding-basis { color: var(--observed); }
+.finding.derived .finding-basis { color: var(--derived); }
+
+.finding p {
+  overflow-wrap: anywhere;
+}
+
+.finding-evidence {
+  margin-top: 8px;
+}
+
+.report-section.limitations .finding {
+  border-left-color: var(--warning);
+}
+
+.report-section.limitations > h3::after {
+  content: 'Limitations';
+  margin-left: 12px;
+  padding: 2px 10px;
+  color: var(--warning);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+/* Print: a plain, light document (spec 9.6) */
+@media print {
+  :root {
+    --bg: #fff;
+    --surface: #fff;
+    --surface-2: #f5f5f5;
+    --border: #cfcfcf;
+    --border-strong: #b5b5b5;
+    --text: #111;
+    --text-2: #333;
+    --text-3: #555;
+    --accent: #1f4fbf;
+    --observed: #0b6b61;
+    --derived: #5b3bb8;
+    --warning: #8a5a00;
+  }
+  .steps,
+  .case-header .case-facts,
+  .step-nav,
+  .toolbar,
+  .event-panel,
+  .panel-backdrop,
+  .demo-banner {
+    display: none !important;
+  }
+  .page {
+    max-width: none;
+    gap: 12px;
+  }
+  .report {
+    max-width: none;
+  }
+  .finding {
+    break-inside: avoid;
+    background: #fff;
+  }
+  .report-section {
+    break-inside: auto;
+  }
+  .report-section h3 {
+    break-after: avoid;
+  }
+  .ref-chip,
+  .group-chip {
+    color: #111;
+    border-color: #999;
+    background: transparent;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

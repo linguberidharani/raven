@@ -1,9 +1,10 @@
 import { Brand } from './Brand';
+import { Icon } from './Icons';
 
 const POINTS = [
-  { color: 'var(--observed)', title: 'Observed and derived, kept apart', text: 'Every statement is labelled as recorded evidence or as an interpretation.' },
-  { color: 'var(--accent)', title: 'Traceable to the raw record', text: 'Follow a finding back to the Sysmon event it came from.' },
-  { color: 'var(--derived)', title: 'Real data only', text: 'When there is no data, RAVEN says so instead of filling the screen.' },
+  { icon: 'search', title: 'Correlated activity', text: 'Related events from Sysmon evidence are grouped into one attack session.' },
+  { icon: 'branch', title: 'Reconstructed attack chain', text: 'Follow process, network and file activity from first execution to observed impact.' },
+  { icon: 'shield', title: 'Observed and derived, kept apart', text: 'Every statement in a report shows whether it is evidence or interpretation.' },
 ];
 
 /** Two panels: what RAVEN is (hidden on small screens) and the form. The form page supplies its own h1. */
@@ -11,15 +12,16 @@ export default function AuthLayout({ children }) {
   return (
     <div className="auth">
       <aside className="auth-brand" aria-label="About RAVEN">
-        <div>
+        <div className="auth-brand-top">
           <Brand size={34} />
-          <p className="auth-headline">Ransomware Attack Visualization and Event Navigator</p>
-          <p>Turns Sysmon telemetry into an investigation that an analyst can follow from the report back to the raw record.</p>
+          <p className="auth-headline">Investigate ransomware incidents from evidence.</p>
         </div>
         <ul className="auth-points">
-          {POINTS.map((point) => (
-            <li key={point.title}>
-              <span className="auth-mark" style={{ background: point.color }} aria-hidden="true" />
+          {POINTS.map((point, index) => (
+            <li key={point.title} style={{ animationDelay: `${0.25 + index * 0.12}s` }}>
+              <span className="auth-icon" aria-hidden="true">
+                <Icon name={point.icon} size={20} />
+              </span>
               <div>
                 <strong>{point.title}</strong>
                 <span>{point.text}</span>
@@ -27,6 +29,7 @@ export default function AuthLayout({ children }) {
             </li>
           ))}
         </ul>
+        <p className="auth-foot">RAVEN, Ransomware Attack Visualization and Event Navigator. Trace the Attack. Measure the Impact.</p>
       </aside>
       <main className="auth-panel" id="main">
         <div className="auth-card">

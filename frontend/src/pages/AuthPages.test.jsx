@@ -19,6 +19,7 @@ describe('signed-out access', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Analyst sign in' })).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/login?next=%2Finvestigations%2F3%2Ftimeline');
     expect(screen.getByText('Access your investigation workspace.')).toBeInTheDocument();
+    expect(document.title).toBe('Sign in | RAVEN');
   });
 
   it('shows a clear error page when the server cannot be reached, with a retry', async () => {

@@ -30,16 +30,39 @@ export const DASHBOARD = {
     { ...INVESTIGATION, id: 2, code: 'INV-2026-002', title: 'Waiting for evidence', severity: null, status: 'active', counts: { evidence: 0, detections: 0, sessions: 0, timeline_events: 0 } },
     INVESTIGATION,
   ],
-  latest_session: null,
-  alerts: [],
-  recent_activity: [],
-  evidence_queue: [],
+  latest_session: {
+    investigation_id: 1,
+    code: 'INV-2026-001',
+    session_id: 'RAVEN-SESSION-LAB-R001-1001',
+    start_time: '2026-09-13T08:39:49.545Z',
+    end_time: '2026-09-13T08:43:09.488Z',
+    severity: 'HIGH',
+    chain: [
+      { rule_id: 'RAVEN-R003', rule_name: 'Sustained File Creation Burst', severity: 'HIGH', groups: 54, first_start: '2026-09-13T08:39:49.545Z' },
+      { rule_id: 'RAVEN-R001', rule_name: 'Mass File Modification Burst', severity: 'HIGH', groups: 19, first_start: '2026-09-13T08:39:52.100Z' },
+      { rule_id: 'RAVEN-R002', rule_name: 'Process Network File Stager Pattern', severity: 'MEDIUM', groups: 1, first_start: '2026-09-13T08:40:10.000Z' },
+    ],
+  },
+  alerts: [
+    { investigation_id: 1, code: 'INV-2026-001', group_id: 'RAVEN-R003:4:2026-09-13T08:39:49.545Z', rule_id: 'RAVEN-R003', rule_name: 'Sustained File Creation Burst', severity: 'HIGH', window_start: '2026-09-13T08:39:49.545Z', event_count: 10 },
+  ],
+  recent_activity: [
+    { time: '2026-09-21T10:20:00.000Z', kind: 'analysis_completed', investigation_id: 1, code: 'INV-2026-001', text: 'Analysis completed for INV-2026-001' },
+    { time: '2026-09-21T10:16:00.000Z', kind: 'evidence_uploaded', investigation_id: 1, code: 'INV-2026-001', text: 'Evidence uploaded to INV-2026-001' },
+  ],
+  evidence_queue: [
+    { id: 3, investigation_id: 2, code: 'INV-2026-002', filename: 'pending.evtx', status: 'uploaded', size_bytes: 100, error: null, created_at: '2026-09-21T11:00:00.000Z' },
+  ],
 };
 
 export const EMPTY_DASHBOARD = {
   ...DASHBOARD,
   totals: { investigations: 0, active_investigations: 0, open_cases: 0, evidence_items: 0, sessions: 0, high_severity_findings: 0 },
   recent_investigations: [],
+  latest_session: null,
+  alerts: [],
+  recent_activity: [],
+  evidence_queue: [],
 };
 
 export const EVIDENCE_ITEM = {
@@ -242,4 +265,124 @@ export const EVENT_DETAIL = {
   raw_xml: '<Event><System><EventID>1</EventID></System></Event>',
   groups: [{ group_id: 'RAVEN-R001:1001:2026-09-13T08:39:49.545Z', rule_id: 'RAVEN-R001', basis: 'derived' }],
   timeline: { session_id: 'RAVEN-SESSION-LAB-R001-1001', sequence_number: 4, description: 'Process created: C:\\Test\\a.exe' },
+};
+
+const tlItem = (n, type, text, time, groups = []) => ({
+  timeline_event_id: n,
+  session_id: 'RAVEN-SESSION-LAB-R001-1001',
+  sequence_number: n,
+  timestamp: time,
+  description: text,
+  computer: 'LAB-HOST',
+  event_type: type,
+  event_id: 1400 + n,
+  sysmon_event_id: type === 'file_create' ? 11 : type === 'network_connection' ? 3 : 1,
+  raw_event_ref: `1:${n}`,
+  basis: 'observed',
+  groups,
+});
+
+const grp = (rule, id) => ({ group_id: `${rule}:${id}:2026-09-13T08:39:49.545Z`, rule_id: rule, basis: 'derived' });
+
+export const TIMELINE = {
+  items: [
+    tlItem(1, 'process_creation', 'Process created: C:\\Test\\a.exe (PID 1001)', '2026-09-13T08:39:49.545Z', [grp('RAVEN-R001', 1001)]),
+    tlItem(2, 'file_create', 'File created: C:\\Temp\\one.txt', '2026-09-13T08:39:50.100Z', [grp('RAVEN-R001', 1001), grp('RAVEN-R003', 1001), grp('RAVEN-R003', 1002)]),
+    tlItem(3, 'network_connection', 'Connection from a.exe to 203.0.113.45:443', '2026-09-13T08:40:02.250Z'),
+  ],
+  total: 3,
+  page: 1,
+  page_size: 50,
+};
+
+const category = (name, count, score, extra = {}) => ({
+  category: name,
+  impact_analysis_id: 1,
+  observed: {
+    basis: 'observed',
+    event_count: count,
+    affected_assets: Array.from({ length: score }, (_, i) => `asset-${i}`),
+    top_assets: [{ asset: `C:\\Users\\lab\\${name}\\top.txt`, events: 3 }],
+    details: { distinct_computers: 1, distinct_users: 3, distinct_processes: 16 },
+    ...extra,
+  },
+  derived: { basis: 'derived', impact_score: score, definition: 'The number of distinct affected assets. A calculated count; it does not measure damage.' },
+  evidence: { event_ids: [1, 2], raw_event_refs: ['1:1', '1:2'] },
+});
+
+export const IMPACT = {
+  sessions: [
+    {
+      session_id: 'RAVEN-SESSION-LAB-R001-1001',
+      categories: [category('files_affected', 558, 475), category('network_activity', 14, 12), category('process_activity', 25, 14), category('unsupported_events', 0, 0, { top_assets: [], affected_assets: [] })],
+      activity: {
+        basis: 'derived',
+        bucket_seconds: 10,
+        buckets: [
+          { start: '2026-09-13T08:39:40.000Z', file_create: 3, network_connection: 0, process_creation: 1, total: 4 },
+          { start: '2026-09-13T08:39:50.000Z', file_create: 10, network_connection: 2, process_creation: 0, total: 12 },
+        ],
+      },
+    },
+  ],
+};
+
+export const RULES_ANSWER = { rules: RULES };
+
+const GROUP_IDS = ['RAVEN-R001:1001:2026-09-13T08:39:49.545Z', 'RAVEN-R003:1001:2026-09-13T08:39:51.545Z', 'RAVEN-R003:1001:2026-09-13T08:40:01.545Z'];
+
+export const RARF_DOC = {
+  rarf_version: '1.0',
+  rarf_id: 'RARF-RAVEN-SESSION-LAB-R001-1001',
+  attack_session: {
+    session_id: 'RAVEN-SESSION-LAB-R001-1001',
+    computer: 'LAB-HOST',
+    start_time: '2026-09-13T08:39:49.545Z',
+    end_time: '2026-09-13T08:43:09.488Z',
+    severity: 'HIGH',
+    confidence: null,
+    description: 'Reconstructed attack session containing 3 correlation group(s).',
+  },
+  detection: {
+    correlation_groups: GROUP_IDS.map((groupId, index) => ({ correlation_group_id: groupId, correlation_type: index === 0 ? 'RAVEN-R001' : 'RAVEN-R003', event_ids: [index + 1] })),
+    rules: [
+      { rule_database_id: 1, rule_id: 'RAVEN-R001', rule_name: 'Mass File Modification Burst', description: 'd', enabled: true, rule_definition: { severity: 'HIGH' } },
+      { rule_database_id: 3, rule_id: 'RAVEN-R003', rule_name: 'Sustained File Creation Burst', description: 'd', enabled: true, rule_definition: { severity: 'HIGH' } },
+    ],
+    event_ids: [1, 2, 3, 4],
+  },
+  timeline: { events: [1, 2, 3, 4].map((n) => ({ timeline_event_id: n, event_id: n, sequence_number: n, timestamp: '2026-09-13T08:39:49.545Z', raw_event_ref: `1:${n}`, event_type: 'file_create', computer: 'LAB-HOST', user: null })) },
+  impact: { categories: { files_affected: { impact_score: 3 }, network_activity: { impact_score: 0 }, process_activity: { impact_score: 1 }, unsupported_events: { impact_score: 0 } } },
+  traceability: {
+    event_ids: [1, 2, 3, 4],
+    raw_event_refs: ['1:1', '1:2', '1:3', '1:4'],
+    correlation_group_ids: GROUP_IDS,
+    timeline_event_ids: [1, 2, 3, 4],
+    impact_analysis_ids: [1, 2, 3, 4],
+  },
+};
+
+const emptyEvidence = { event_ids: [], correlation_group_ids: [], timeline_event_ids: [], impact_analysis_ids: [], raw_event_refs: [] };
+const finding = (statement, basis, evidence = {}) => ({ statement, basis, evidence: { ...emptyEvidence, ...evidence } });
+
+export const REPORT_DOC = {
+  report_title: 'Investigation Report: RAVEN-SESSION-LAB-R001-1001',
+  attack_session_id: 1,
+  session_id: 'RAVEN-SESSION-LAB-R001-1001',
+  generated_at: '2026-09-21T18:25:36.725Z',
+  sections: [
+    { section_id: 'executive_summary', title: 'Executive summary', findings: [
+      finding('RAVEN reconstructed one attack session on LAB-HOST.', 'observed', { raw_event_refs: ['1:1', '1:4'] }),
+      finding('The session severity is HIGH: the highest severity of the matching rules.', 'derived', { correlation_group_ids: GROUP_IDS }),
+    ] },
+    { section_id: 'session_overview', title: 'Session overview', findings: [finding('Session ID: RAVEN-SESSION-LAB-R001-1001.', 'observed')] },
+    { section_id: 'detection_evidence', title: 'Detection evidence', findings: [finding('Rule RAVEN-R001 matched 1 group.', 'derived', { correlation_group_ids: [GROUP_IDS[0]] })] },
+    { section_id: 'timeline_summary', title: 'Timeline summary', findings: [finding('The timeline has 4 events.', 'observed', { raw_event_refs: ['1:1', '1:2', '1:3', '1:4'] })] },
+    { section_id: 'impact_analysis', title: 'Impact analysis', findings: [finding('3 distinct files were affected.', 'derived')] },
+    { section_id: 'evidence_traceability', title: 'Evidence traceability', findings: [finding('Every statement links to recorded events.', 'observed')] },
+    { section_id: 'confidence_limitations', title: 'Confidence and limitations', findings: [
+      finding('The telemetry does not show who carried out the activity or why.', 'derived'),
+      finding('The session has no confidence value.', 'observed'),
+    ] },
+  ],
 };
