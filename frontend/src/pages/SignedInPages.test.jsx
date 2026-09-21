@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { DASHBOARD, EMPTY_DASHBOARD, HEALTH, USER } from '../test/fixtures';
+import { DASHBOARD, EMPTY_DASHBOARD, HEALTH, INVESTIGATION, USER } from '../test/fixtures';
+import { caseRoutes } from '../test/routes';
 import { mockApi } from '../test/mockApi';
 import { renderApp } from '../test/render';
 
@@ -144,32 +145,28 @@ describe('Settings', () => {
 });
 
 describe('planned pages and unknown addresses', () => {
+  const three = { ...INVESTIGATION, id: 3, code: 'INV-2026-003' };
+
   it('opens the first step of an investigation from its address', async () => {
-    mockApi(me);
+    mockApi(caseRoutes(three));
     renderApp('/investigations/3');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Evidence & Log Upload' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Evidence & Log Upload' })).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/investigations/3/evidence');
   });
 
   it('says plainly which screens are not built yet and names their API', async () => {
-    mockApi(me);
+    mockApi(caseRoutes(three));
     renderApp('/investigations/3/impact');
     expect(await screen.findByRole('heading', { name: 'This screen is not built yet' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Impact Analysis' })).toBeInTheDocument();
     expect(screen.getByText('GET /api/investigations/3/impact')).toBeInTheDocument();
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getAllByRole('listitem');
-    expect(crumbs.map((item) => item.textContent)).toEqual(['Investigations', 'Investigation 3', 'Impact Analysis']);
+    expect(crumbs.map((item) => item.textContent)).toEqual(['Investigations', 'INV-2026-003', 'Impact Analysis']);
     expect(crumbs[2].firstChild).toHaveAttribute('aria-current', 'page');
   });
 
-  it('shows the investigations page as not built yet', async () => {
-    mockApi(me);
-    renderApp('/investigations');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Investigations' })).toBeInTheDocument();
-    expect(screen.getByText('POST /api/investigations')).toBeInTheDocument();
-  });
-
   it.each(['/nowhere', '/investigations/abc/timeline', '/investigations/3/unknown', '/investigations/0/report'])('shows page not found for %s', async (path) => {
-    mockApi(me);
+    mockApi(caseRoutes(three));
     renderApp(path);
     expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('link', { name: 'Go to the dashboard' })).toHaveAttribute('href', '/dashboard'));

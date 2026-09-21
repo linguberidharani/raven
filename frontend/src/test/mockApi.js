@@ -14,7 +14,7 @@ export function mockApi(routes) {
   const fetchMock = vi.fn(async (url, init = {}) => {
     const method = (init.method ?? 'GET').toUpperCase();
     const path = String(url).split('?')[0];
-    const call = { method, url: String(url), path, body: init.body ? JSON.parse(init.body) : undefined, init };
+    const call = { method, url: String(url), path, body: typeof init.body === 'string' ? JSON.parse(init.body) : init.body, init };
     calls.push(call);
     const handler = routes[`${method} ${path}`];
     if (!handler) return jsonResponse(404, { detail: `no mock for ${method} ${path}`, code: 'not_found', request_id: 'test' });

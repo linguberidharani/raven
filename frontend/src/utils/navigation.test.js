@@ -23,7 +23,7 @@ describe('matchInvestigation', () => {
     expect(matchInvestigation('/investigations/12/report/')).toEqual({ id: 12, step: 'report' });
   });
   it('ignores everything else', () => {
-    for (const path of ['/investigations', '/investigations/x', '/investigations/1/unknown', '/investigations/1/report/extra', '/dashboard']) {
+    for (const path of ['/investigations', '/investigations/x', '/investigations/1/unknown', '/investigations/1/report/extra', '/investigations/0/report', '/dashboard']) {
       expect(matchInvestigation(path)).toBeNull();
     }
   });
@@ -43,6 +43,14 @@ describe('breadcrumbsFor', () => {
       { label: 'Attack Timeline' },
     ]);
     expect(breadcrumbsFor('/investigations/4')).toEqual([{ label: 'Investigations', to: '/investigations' }, { label: 'Investigation 4' }]);
+  });
+  it('uses the code of the investigation when it is known', () => {
+    expect(breadcrumbsFor('/investigations/4/rarf', 'INV-2026-004')).toEqual([
+      { label: 'Investigations', to: '/investigations' },
+      { label: 'INV-2026-004', to: '/investigations/4' },
+      { label: 'RARF' },
+    ]);
+    expect(breadcrumbsFor('/investigations/4/rarf', null)[1].label).toBe('Investigation 4');
   });
   it('names an unknown path', () => {
     expect(breadcrumbsFor('/nowhere')).toEqual([{ label: 'Not found' }]);

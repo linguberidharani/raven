@@ -5,7 +5,7 @@ import { ErrorBanner, FullScreenMessage, LoadingBlock } from './States';
 
 /** Signed-in pages: wait for the server, show a clear error when it cannot be asked, send anonymous visitors to sign in. */
 export function RequireAuth({ children }) {
-  const { status, error, reload } = useAuth();
+  const { status, error, reload, signedOut } = useAuth();
   const location = useLocation();
   if (status === 'loading') {
     return (
@@ -21,6 +21,7 @@ export function RequireAuth({ children }) {
       </FullScreenMessage>
     );
   }
+  if (status === 'anonymous' && signedOut) return <Navigate to="/login" replace />;
   if (status === 'anonymous') {
     const next = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?next=${next}`} replace />;

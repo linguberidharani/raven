@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { CaseProvider, useCase } from '../cases/CaseContext';
 import { initials } from '../utils/mapping';
-import { matchInvestigation } from '../utils/navigation';
+import { breadcrumbsFor } from '../utils/navigation';
 import { Brand } from './Brand';
+import { Breadcrumbs } from './Breadcrumbs';
 import { Icon } from './Icons';
 import { Sidebar } from './Sidebar';
 
-/** The frame of every signed-in page: skip link, top bar, sidebar (a drawer under 1024 px) and the main landmark. */
-export default function AppShell() {
+function Frame() {
   const { user, logout } = useAuth();
+  const { investigation } = useCase();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const main = useRef(null);
   const first = useRef(true);
-  const found = matchInvestigation(pathname);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -54,6 +55,7 @@ export default function AppShell() {
         <Link to="/dashboard" className="topbar-brand" aria-label="RAVEN dashboard">
           <Brand size={26} />
         </Link>
+        <Breadcrumbs items={breadcrumbsFor(pathname, investigation?.code)} />
         <div className="topbar-spacer" />
         <Link to="/profile" className="user-chip" aria-label={`Profile of ${user?.name ?? 'the signed-in user'}`}>
           <span className="avatar" aria-hidden="true">
@@ -62,10 +64,19 @@ export default function AppShell() {
           <span className="user-name">{user?.name}</span>
         </Link>
       </header>
-      <Sidebar id="sidebar" open={open} onClose={close} investigationId={found ? found.id : null} onSignOut={signOut} />
+      <Sidebar id="sidebar" open={open} onClose={close} onSignOut={signOut} />
       <main className="main" id="main" tabIndex={-1} ref={main}>
         <Outlet />
       </main>
     </div>
+  );
+}
+
+/** The frame of every signed-in page: skip link, top bar with breadcrumbs, sidebar (a drawer under 1024 px), main. */
+export default function AppShell() {
+  return (
+    <CaseProvider>
+      <Frame />
+    </CaseProvider>
   );
 }

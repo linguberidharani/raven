@@ -106,6 +106,18 @@ const PATHS = {
     </>
   ),
   check: <path d="M4 12l5 5L20 6" />,
+  arrow: (
+    <>
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </>
+  ),
   inbox: (
     <>
       <path d="M3 13l3-8h12l3 8" />

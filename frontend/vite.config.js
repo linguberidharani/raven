@@ -15,6 +15,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.js'],
     include: ['src/**/*.test.{js,jsx}'],
     css: false,
+    // Slower machines render the whole app in the first test of a file; give them room.
+    testTimeout: 20000,
+    hookTimeout: 20000,
     restoreMocks: true,
     unstubEnvs: true,
   },

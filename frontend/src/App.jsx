@@ -4,11 +4,12 @@ import AppShell from './components/AppShell';
 import { DemoBanner } from './components/DemoBanner';
 import { PublicOnly, RequireAuth } from './components/RouteGuards';
 import Dashboard from './pages/Dashboard';
+import InvestigationLayout from './pages/InvestigationLayout';
 import InvestigationStep from './pages/InvestigationStep';
+import Investigations from './pages/Investigations';
 import Intro from './pages/Intro';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
-import Planned from './pages/Planned';
 import Profile from './pages/Profile';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
@@ -43,9 +44,11 @@ export default function App() {
           }
         >
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/investigations" element={<Planned title="Investigations" subtitle="All investigations, with search and filters." endpoints={['GET /api/investigations', 'POST /api/investigations']} />} />
-          <Route path="/investigations/:id" element={<Navigate to="evidence" replace />} />
-          <Route path="/investigations/:id/:step" element={<InvestigationStep />} />
+          <Route path="/investigations" element={<Investigations />} />
+          <Route path="/investigations/:id" element={<InvestigationLayout />}>
+            <Route index element={<Navigate to="evidence" replace />} />
+            <Route path=":step" element={<InvestigationStep />} />
+          </Route>
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />

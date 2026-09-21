@@ -31,14 +31,17 @@ function requestId() {
   return crypto && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : null;
 }
 
-export async function request(method, path, { body, params, signal, silent401 = false } = {}) {
+export async function request(method, path, { body, form, params, signal, silent401 = false } = {}) {
   if (dataSource() === 'demo') return demoRequest(method, path, { body, params });
 
   const headers = { Accept: 'application/json' };
   const id = requestId();
   if (id) headers['X-Request-ID'] = id;
   const init = { method, headers, credentials: 'same-origin', signal };
-  if (body !== undefined) {
+  if (form !== undefined) {
+    // multipart: the browser sets the Content-Type with its boundary
+    init.body = form;
+  } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(body);
   }
@@ -81,3 +84,10 @@ export async function request(method, path, { body, params, signal, silent401 = 
 export const get = (path, options) => request('GET', path, options);
 export const post = (path, body, options) => request('POST', path, { ...options, body });
 export const patch = (path, body, options) => request('PATCH', path, { ...options, body });
+
+/** Uploads one file as multipart/form-data in the field "file". */
+export function upload(path, file, options) {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  return request('POST', path, { ...options, form });
+}

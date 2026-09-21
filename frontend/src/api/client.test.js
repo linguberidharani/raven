@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildUrl, dataSource, get, patch, post, request, setUnauthorizedHandler } from './client';
+import { buildUrl, dataSource, get, patch, post, request, setUnauthorizedHandler, upload } from './client';
 import { ApiError } from './errors';
 import { DEMO_USER } from '../demo';
 import { jsonResponse, mockApi } from '../test/mockApi';
@@ -127,5 +127,24 @@ describe('demo data source', () => {
 describe('jsonResponse helper', () => {
   it('builds a JSON response', async () => {
     expect(await jsonResponse(200, { a: 1 }).json()).toEqual({ a: 1 });
+  });
+});
+
+describe('upload', () => {
+  it('sends the file as multipart form data in the field "file" and lets the browser set the content type', async () => {
+    const { fetchMock } = mockApi({ 'POST /api/investigations/1/evidence': { status: 201, body: { id: 5 } } });
+    const file = new File(['ElfFile'], 'sysmon.evtx', { type: 'application/octet-stream' });
+    expect(await upload('/api/investigations/1/evidence', file)).toEqual({ id: 5 });
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.method).toBe('POST');
+    expect(init.body).toBeInstanceOf(FormData);
+    expect(init.body.get('file').name).toBe('sysmon.evtx');
+    expect(init.headers['Content-Type']).toBeUndefined();
+  });
+
+  it('turns a refused upload into an ApiError', async () => {
+    mockApi({ 'POST /api/investigations/1/evidence': { status: 409, body: { detail: 'This file is already part of the investigation.', code: 'duplicate_evidence', request_id: 'r' } } });
+    const error = await upload('/api/investigations/1/evidence', new File(['x'], 'a.evtx')).catch((e) => e);
+    expect(error).toMatchObject({ status: 409, code: 'duplicate_evidence' });
   });
 });

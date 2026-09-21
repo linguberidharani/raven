@@ -6,6 +6,8 @@ import { setUnauthorizedHandler } from '../api/client';
 const AuthContext = createContext(null);
 
 const ANONYMOUS = { status: 'anonymous', user: null, error: null };
+// After an explicit sign out nobody wants to be sent back to the page they left.
+const SIGNED_OUT = { status: 'anonymous', user: null, error: null, signedOut: true };
 
 /**
  * status: 'loading' (asking the server), 'authenticated', 'anonymous' or 'error' (the server could not be asked).
@@ -54,7 +56,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 401)) throw error;
     }
-    setState(ANONYMOUS);
+    setState(SIGNED_OUT);
   }, []);
 
   const value = useMemo(() => ({ ...state, reload, login, register, logout }), [state, reload, login, register, logout]);

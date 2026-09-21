@@ -76,3 +76,36 @@ export function PasswordField({ label, value, onChange, error, hint, ...rest }) 
     </div>
   );
 }
+
+/** A labelled multi-line input, linked to its hint and error like TextField. */
+export function TextArea({ label, value, onChange, error, hint, optional = false, rows = 4, ...rest }) {
+  const base = useId();
+  return (
+    <div className="field">
+      <label className="field-label" htmlFor={base}>
+        {label}
+        {optional ? <span className="field-optional"> (optional)</span> : null}
+      </label>
+      <textarea
+        id={base}
+        className="input textarea"
+        rows={rows}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={ids(base, hint, error)}
+        {...rest}
+      />
+      {hint ? (
+        <div id={`${base}-hint`} className="field-hint">
+          {hint}
+        </div>
+      ) : null}
+      {error ? (
+        <div id={`${base}-error`} className="field-error">
+          {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}

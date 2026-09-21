@@ -56,3 +56,78 @@ export function initials(name) {
 export function plural(count, one, many = `${one}s`) {
   return `${count} ${count === 1 ? one : many}`;
 }
+
+const STEP_KEYS = ['evidence', 'detection', 'reconstruction', 'timeline', 'impact', 'rarf', 'report'];
+
+/**
+ * Which steps of an investigation have data, from the counts and the analysis status the API sends.
+ * Nothing is computed about the incident: a step is "ready" when the API says its data exists.
+ */
+export function stepStates(investigation) {
+  const counts = investigation?.counts ?? {};
+  const analysed = investigation?.analysis_status === 'completed';
+  const hasSession = analysed && (counts.sessions ?? 0) > 0;
+  return {
+    evidence: (counts.evidence ?? 0) > 0,
+    detection: analysed,
+    reconstruction: hasSession,
+    timeline: analysed && (counts.timeline_events ?? 0) > 0,
+    impact: hasSession,
+    rarf: hasSession,
+    report: hasSession,
+  };
+}
+
+export function readySteps(investigation) {
+  const states = stepStates(investigation);
+  return STEP_KEYS.filter((key) => states[key]).length;
+}
+
+const EVENT_TYPES = {
+  process_creation: 'Process created',
+  network_connection: 'Network connection',
+  file_create: 'File created',
+  unsupported: 'Not supported by RAVEN',
+};
+
+export function eventTypeLabel(type) {
+  return EVENT_TYPES[type] ?? (typeof type === 'string' && type ? type : 'Unknown');
+}
+
+const SOURCE_TYPES = { evtx_upload: 'EVTX upload', vm_collector: 'VM collector' };
+
+export function sourceTypeLabel(type) {
+  return SOURCE_TYPES[type] ?? (typeof type === 'string' && type ? type : 'Unknown');
+}
+
+export const ANALYSIS_STAGES = [
+  { name: 'collect', label: 'Collect records' },
+  { name: 'normalize', label: 'Normalize' },
+  { name: 'deduplicate', label: 'Remove duplicates' },
+  { name: 'ingest', label: 'Store events' },
+  { name: 'correlate', label: 'Detect and correlate' },
+  { name: 'reconstruct', label: 'Reconstruct session' },
+  { name: 'timeline', label: 'Build timeline' },
+  { name: 'impact', label: 'Analyse impact' },
+  { name: 'rarf', label: 'Write RARF' },
+  { name: 'report', label: 'Generate report' },
+];
+
+export function analysisStageLabel(name) {
+  return ANALYSIS_STAGES.find((stage) => stage.name === name)?.label ?? name;
+}
+
+const STAGE_STATUS = {
+  pending: { label: 'Waiting', tone: 'neutral' },
+  running: { label: 'Running', tone: 'accent' },
+  completed: { label: 'Done', tone: 'success' },
+  failed: { label: 'Failed', tone: 'danger' },
+};
+
+export function stageStatusInfo(status) {
+  return STAGE_STATUS[status] ?? { label: status || 'Waiting', tone: 'neutral' };
+}
+
+export function isRunActive(run) {
+  return run?.status === 'queued' || run?.status === 'running';
+}
