@@ -214,7 +214,7 @@ def test_options_are_validated():
         EngineOptions(group_policy="x")
     with pytest.raises(ValueError, match="membership"):
         EngineOptions(membership="x")
-    assert EngineOptions().label() == "strict/skip_window/minimal/inclusive"
+    assert EngineOptions().label() == "strict/skip_matched/minimal/inclusive"
 
 
 # ---------------------------------------------------------------- explanation

@@ -23,7 +23,10 @@ of how a window is searched. EngineOptions makes each of them explicit:
     inclusive_window  an event exactly time_window_seconds after the window start is inside (True)
                     or outside (False)
 
-The defaults are the settings that reproduce the reference numbers of the spec (see explore.py).
+The defaults are strict / skip_matched / minimal / inclusive. Of the 32 combinations, only strict order with
+skip_matched and minimal membership reproduces the reference numbers of the spec on the reference data (groups
+19, 14 and 54; 558 file creation, 14 network connection and 25 process creation events in the groups; see
+explore.py). Whether the window edge is inclusive makes no difference on that data; inclusive is used.
 """
 
 from __future__ import annotations
@@ -50,7 +53,7 @@ def timestamp_to_ms(timestamp: str) -> int:
 @dataclass(frozen=True)
 class EngineOptions:
     step_order: str = "strict"
-    group_policy: str = "skip_window"
+    group_policy: str = "skip_matched"
     membership: str = "minimal"
     inclusive_window: bool = True
 
