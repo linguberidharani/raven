@@ -3,3 +3,7 @@
 
 # S0: test runner for the whole project.
 pytest>=8.0
+
+# S11: httpx is used by the FastAPI/Starlette TestClient in the API tests.
+#      Verify: python -c "import httpx; print('httpx', httpx.__version__)"
+httpx>=0.27
