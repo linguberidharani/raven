@@ -35,3 +35,10 @@ The reference numbers in spec sections 6.3 and 6.5b apply only if the owner stil
 
 - Window search of the correlation engine: steps in strict order; after a match the search continues after the last matched event (skip_matched); a group holds exactly the matched events (minimal); the window edge is inclusive. Chosen because only this combination of the 32 tried reproduces the reference numbers of the spec (87 groups, 597 events).
 - Rules use process_id as match key. process_guid is also allowed by the rule schema.
+
+## Design choices made in S9 and S10 (2026-09-21)
+
+- RARF only formalizes stored evidence (no detection, no inference, no recalculation); it has no generation time; detection.rules also carries rule_id and rule_name.
+- The report is built from the RARF only. Every finding is labelled observed or derived and linked to its evidence. A validator enforces the wording rules. generated_at is null in the content; the API sets it.
+- UI views: "What happened?" = executive_summary and session_overview; "How did it happen?" = detection_evidence and timeline_summary.
+- A network connection with Initiated false is described as incoming in the timeline (spec addition, S7).
