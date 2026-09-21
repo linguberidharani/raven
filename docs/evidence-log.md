@@ -96,3 +96,12 @@ Only real output is recorded here. Nothing is marked passed without it.
 - The spec example group has 6 events: process_creation 1:1543 at 2026-09-13T08:39:49.695Z and file_create 1:2145 to 1:2149 (the fifth at 2026-09-13T08:40:31.186Z); steps found 1 of 1 and 5 of 5.
 - Limitations: a group holds only the events its steps need (process 1224 has 64 file_create events, but only the events of matched groups count in the session numbers). Correlation matches process IDs over the whole database and is not scoped per computer; reconstruction stops with an error if a group mixes computers (decision D7: one VM, one host).
 - Result: passed
+
+### S6 Reconstruction, 2026-09-21
+
+- Environment fix: in S5 the venv was not activated. PyYAML 6.0.3 was then installed into the venv (D:\Projects\RAVEN\venv\Lib\site-packages), pip check reported no broken requirements, and requirements.lock.txt did not change (git diff empty). The full suite was re-run inside the venv: 406 passed in 118.39 s.
+- Code (bb2ea42): raven\reconstruction\sequencer.py and persist.py; tests in tests\reconstruction and tests\integration (the reference pipeline up to correlation runs once per test session in tests\integration\conftest.py and every module gets its own database copy). No new dependencies.
+- Result on the reference database: 87 correlation groups read and 1 attack session, RAVEN-SESSION-Dharani-RAVEN-R003-4-2026-09-13T08-39-49-545Z; computer Dharani; start 2026-09-13T08:39:49.545Z; end 2026-09-13T08:43:09.488Z; severity HIGH; confidence null (decision D5); 87 groups from RAVEN-R001, RAVEN-R002 and RAVEN-R003; description "Reconstructed attack session containing 87 correlation group(s) from rule(s): RAVEN-R001, RAVEN-R002, RAVEN-R003."; mapping file SHA256 088FE8B148B84E5CD9EB1138957C933A845E5B4C842086B958B664B5B9ABBE95, identical on two runs; database validation valid (attack_sessions 1, correlated_events 696).
+- The first group by start time is RAVEN-R003:4:2026-09-13T08:39:49.545Z (process_id 4, ten file creations within 20 ms). The session start equals the example timestamp in spec section 6.2 (2026-09-13T08:39:49.545Z).
+- Groups by start minute: 08:39: 17, 08:40: 62, 08:41: 6, 08:42: 2. First five groups in start order: R003:4 at 08:39:49.545 (10 events), R003:4 at 08:39:49.565 (10), R001:824 at 08:39:49.573 (6), R003:824 at 08:39:49.574 (10), R001:956 at 08:39:49.577 (6).
+- Result: passed
