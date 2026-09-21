@@ -180,3 +180,10 @@ Only real output is recorded here. Nothing is marked passed without it.
 - My mistake: the stop condition of the watch script (raventest >= 60) could never be met, so the script was stopped by hand and its final summary was not printed. The product is not affected.
 - Not seen: the final summary of the watch script, the server log lines, and the cleanup and shutdown of the VM.
 - Result: passed
+
+### S14 addendum: read-only check of the burst counts, 2026-09-21
+
+- Result of the read-only check of data\investigations\2 (workspace database valid, integrity_check ok, foreign_key_check 0): the inbox file has 1,021,516 bytes and 424 lines and its SHA-256 equals the one of evidence 2 (ready, 424 events); 22 analysis runs, all completed; 422 events after de-duplication of the 424 raw records (the two removed records were not examined); groups R001 5 and R003 26 (31 in total); events with .raventest by process 3504: 60; all file creations of process 3504: 63, of which 3 are not .raventest (two PowerShell script policy test files at 12:51:11.856Z and 12:51:11.858Z and StartupProfileData-NonInteractive at 12:51:56.493Z); timeline events with raventest: 58.
+- The explanation of the entry above is confirmed: 63 = 6 groups of ten + 3 left over. The first group holds the two policy test files and eight burst files; the three events left over (two burst files and the profile file) form no group. My expectation of 62 in the check was wrong by one because I did not expect the profile file.
+- The real paths contain the Windows user name; RARF and report files should be handled with that in mind.
+- Result: explanation verified
