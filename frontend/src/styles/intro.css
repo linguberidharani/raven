@@ -1,0 +1,133 @@
+.intro {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  min-height: 100vh;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.intro-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: intro-fade 0.7s ease-out both;
+}
+
+.intro-name {
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  padding-left: 0.28em;
+}
+
+.intro-full {
+  color: var(--text-2);
+  font-size: 1.05rem;
+}
+
+.intro-tagline {
+  color: var(--text-3);
+}
+
+.intro-stage {
+  width: min(960px, 100%);
+}
+
+.intro-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.intro-axis {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  stroke-dasharray: 880;
+  stroke-dashoffset: 880;
+  animation: intro-axis 1s ease-out 1.6s forwards;
+}
+
+.intro-dot {
+  fill: var(--text-3);
+  opacity: 0;
+  animation: intro-dot 1.9s cubic-bezier(0.22, 0.7, 0.2, 1) both;
+}
+
+.intro-node {
+  fill: var(--bg);
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  animation: intro-node 0.4s ease-out both;
+}
+
+.intro-node-label {
+  fill: var(--text-3);
+  font-size: 15px;
+  font-family: var(--font-ui);
+  text-anchor: middle;
+  animation: intro-label 0.4s ease-out both;
+}
+
+.intro-actions {
+  display: flex;
+  gap: 12px;
+  min-height: var(--touch);
+  animation: intro-fade 0.5s ease-out 0.4s both;
+}
+
+@keyframes intro-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes intro-axis {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes intro-dot {
+  0% { opacity: 0; transform: translate(var(--dx), var(--dy)); }
+  15% { opacity: 0.85; }
+  100% { opacity: 0.45; transform: translate(0, 0); }
+}
+
+@keyframes intro-node {
+  from { fill: var(--bg); stroke: var(--border-strong); }
+  to { fill: var(--node-color); stroke: var(--node-color); }
+}
+
+@keyframes intro-label {
+  from { fill: var(--text-3); }
+  to { fill: var(--text); }
+}
+
+/* Reduced motion: the finished picture is shown at once. */
+@media (prefers-reduced-motion: reduce) {
+  .intro-title,
+  .intro-actions {
+    animation: none;
+  }
+  .intro-axis {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .intro-dot {
+    animation: none;
+    opacity: 0.45;
+    transform: none;
+  }
+  .intro-node {
+    animation: none;
+    fill: var(--node-color);
+    stroke: var(--node-color);
+  }
+  .intro-node-label {
+    animation: none;
+    fill: var(--text);
+  }
+}

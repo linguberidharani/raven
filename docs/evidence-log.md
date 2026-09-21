@@ -187,3 +187,12 @@ Only real output is recorded here. Nothing is marked passed without it.
 - The explanation of the entry above is confirmed: 63 = 6 groups of ten + 3 left over. The first group holds the two policy test files and eight burst files; the three events left over (two burst files and the profile file) form no group. My expectation of 62 in the check was wrong by one because I did not expect the profile file.
 - The real paths contain the Windows user name; RARF and report files should be handled with that in mind.
 - Result: explanation verified
+
+### S15 Frontend foundation, 2026-09-21
+
+- Code: frontend\ (React 18.3.1, Vite 6.4.3, React Router 7.18.4 in declarative mode, plain CSS with design tokens, IBM Plex fonts served from the package, no other UI library). API layer (one fetch wrapper with ApiError, per-resource modules, useApi), auth provider (session in the HttpOnly cookie, the code never sees a token), shell with sidebar (a drawer under 1024 px), intro (4.8 s, Skip, reduced motion), sign in and registration, Dashboard, Profile, Settings, demo mode (VITE_DATA_SOURCE=demo, permanent banner, never the default). Tests: 14 files, 129 tests passed on Node 24.12 (Windows); ESLint clean; build 218.7 kB JS (71.1 kB gzip).
+- Deviation from the spec: Vite 6 and React Router 7 instead of Vite 5 and React Router 6. npm audit of the first set reported one high (Vite: server.fs.deny bypass on Windows) and moderate advisories that need the newer versions; after the change 2 moderate remain (Vitest / @vitest/mocker, test runner only, needs Vitest 4, which the npm resolver could not install with the rest). React Router 7 declarative mode needed no code change.
+- Live check in the browser (real backend on 8000, Vite on 5173): the intro plays, the dashboard shows the real registry (2 investigations, 2 evidence items, 2 attack sessions, 104 high severity findings = 73 + 31, evidence Ready 2, both recent investigations with High and Open), the profile shows the real account, and sign out returns to the sign-in page.
+- Found in the browser: after sign out the address was /login?next=%2Fprofile, so signing in again went back to the profile. Fixed in S16a (an explicit sign out does not keep the page).
+- Not seen: the registration page, the mobile drawer and the workflow links of an investigation in the browser (covered by the tests only).
+- Result: passed
