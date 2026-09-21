@@ -18,6 +18,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session, sessionmaker
 
 from raven.database.models import Base
+from raven.database.registry_models import RegistryBase
 
 
 def create_workspace_engine(db_path: str | os.PathLike[str]) -> Engine:
@@ -51,4 +52,19 @@ def open_workspace_database(db_path: str | os.PathLike[str]) -> sessionmaker[Ses
     """
     engine = create_workspace_engine(db_path)
     initialize_database(engine)
+    return create_session_factory(engine)
+
+
+def initialize_registry(engine: Engine) -> None:
+    """Create the 6 registry tables when they are missing. Existing tables and data are left alone."""
+    RegistryBase.metadata.create_all(engine)
+
+
+def open_registry_database(db_path: str | os.PathLike[str]) -> sessionmaker[Session]:
+    """Create (if needed) and open the registry database at a path; return a session factory.
+
+    The engine is available as session_factory.kw["bind"] for disposal.
+    """
+    engine = create_workspace_engine(db_path)
+    initialize_registry(engine)
     return create_session_factory(engine)

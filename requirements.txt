@@ -19,6 +19,15 @@ SQLAlchemy>=2.0
 #     Verify:  python -c "import yaml; print('PyYAML', yaml.__version__)"
 PyYAML>=6.0
 #
+# S11: the API (raven.api). FastAPI is the web framework, Uvicorn the server, pydantic the typed request and
+#      response models, pydantic-settings the typed settings (raven.config), argon2-cffi the password hashing.
+#      Install: python -m pip install -r requirements.txt
+#      Verify:  python -c "import fastapi, uvicorn, pydantic, pydantic_settings, argon2; print('api dependencies ok')"
+fastapi>=0.115
+uvicorn>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+argon2-cffi>=23.1
+#
 # Planned (not installed yet, confirmed at each stage):
-#   FastAPI, Uvicorn, pydantic, pydantic-settings, python-dotenv,
-#   argon2-cffi (password hashing), python-multipart (uploads)
+#   python-multipart (uploads, S12)
