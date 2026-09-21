@@ -24,17 +24,20 @@ from fastapi import FastAPI, Request
 from starlette.responses import Response
 
 import raven
-from raven.api.errors import REQUEST_ID_HEADER, install_error_handlers
+from raven.api.errors import REQUEST_ID_HEADER, error_response, install_error_handlers
 from raven.api.routes import auth as auth_routes
 from raven.api.routes import health as health_routes
+from raven.api.routes import investigations as investigation_routes
 from raven.config import Settings, get_settings
 from raven.database.session import open_registry_database
 from raven.logging_config import configure_logging
+from raven.services.analysis_runs import AnalysisRunManager
 from raven.services.auth import AuthService
 
 logger = logging.getLogger("raven.api")
 
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+_BODY_ALLOWANCE = 1024 * 1024  # room for the multipart framing around an upload
 
 
 def create_app(settings: Settings | None = None, password_hasher: PasswordHasher | None = None) -> FastAPI:
@@ -42,8 +45,13 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     configure_logging(settings.log_level)
     registry_factory = open_registry_database(settings.registry_path)
 
+    runs = AnalysisRunManager(registry_factory, settings)
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        interrupted = runs.recover_interrupted()
+        if interrupted:
+            logger.warning("%s analysis run(s) were interrupted by the last shutdown and are marked failed", interrupted)
         yield
         registry_factory.kw["bind"].dispose()
 
@@ -58,12 +66,18 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     app.state.settings = settings
     app.state.registry_factory = registry_factory
     app.state.auth = AuthService(password_hasher, settings.session_hours)
+    app.state.runs = runs
 
     @app.middleware("http")
     async def request_context(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         supplied = request.headers.get(REQUEST_ID_HEADER, "")
         request.state.request_id = supplied if _REQUEST_ID.match(supplied) else uuid.uuid4().hex
         started = time.perf_counter()
+        declared = request.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > settings.max_upload_bytes + _BODY_ALLOWANCE:
+            response = error_response(request, 413, "payload_too_large", f"The request is larger than {settings.max_upload_mb} MB.")
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
         response = await call_next(request)
         response.headers[REQUEST_ID_HEADER] = request.state.request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -80,6 +94,7 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     install_error_handlers(app)
     app.include_router(health_routes.router)
     app.include_router(auth_routes.router)
+    app.include_router(investigation_routes.router)
     return app
 
 

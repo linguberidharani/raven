@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from raven.services.auth import AuthError
+from raven.services.errors import ServiceError
 
 logger = logging.getLogger("raven.api")
 
@@ -52,6 +53,10 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AuthError)
     async def handle_auth_error(request: Request, exc: AuthError) -> JSONResponse:
+        return error_response(request, exc.status_code, exc.code, exc.detail)
+
+    @app.exception_handler(ServiceError)
+    async def handle_service_error(request: Request, exc: ServiceError) -> JSONResponse:
         return error_response(request, exc.status_code, exc.code, exc.detail)
 
     @app.exception_handler(RequestValidationError)

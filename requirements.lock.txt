@@ -25,6 +25,7 @@ Pygments==2.21.0
 pytest==9.1.1
 python-dotenv==1.2.3
 python-evtx==0.8.1
+python-multipart==0.0.32
 PyYAML==6.0.3
 SQLAlchemy==2.0.54
 starlette==1.6.0

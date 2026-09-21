@@ -52,3 +52,32 @@ def register_and_login(client, email="ada@example.com", password=PASSWORD):
     response = client.post("/api/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200
     return response
+
+
+# ---------------------------------------------------------------- helpers for investigations, evidence and runs (S12)
+
+
+def make_investigation(client, title="Boot activity", **extra):
+    response = client.post("/api/investigations", json={"title": title, **extra})
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def upload_evtx(client, investigation_id, salt=0, name="Sysmon export.evtx", data=None):
+    from tests.synthetic import evtx_bytes
+
+    content = evtx_bytes(salt) if data is None else data
+    return client.post(
+        f"/api/investigations/{investigation_id}/evidence",
+        files={"file": (name, content, "application/octet-stream")},
+    )
+
+
+def run_analysis(app, client, investigation_id, timeout=60):
+    """Start a run, wait for its worker thread and return the final run as the API shows it."""
+    response = client.post(f"/api/investigations/{investigation_id}/analysis")
+    assert response.status_code == 202, response.text
+    assert app.state.runs.wait(response.json()["id"], timeout)
+    final = client.get(f"/api/investigations/{investigation_id}/analysis")
+    assert final.status_code == 200
+    return final.json()

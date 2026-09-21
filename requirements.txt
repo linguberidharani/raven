@@ -29,5 +29,7 @@ pydantic>=2.7
 pydantic-settings>=2.3
 argon2-cffi>=23.1
 #
-# Planned (not installed yet, confirmed at each stage):
-#   python-multipart (uploads, S12)
+# S12: python-multipart lets FastAPI read the multipart upload of an evidence file (POST .../evidence).
+#      Install: python -m pip install -r requirements.txt
+#      Verify:  python -c "import multipart; print('python-multipart ok')"
+python-multipart>=0.0.9

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from raven.api.errors import ApiError
 from raven.config import Settings
 from raven.database.registry_models import User
+from raven.services.analysis_runs import AnalysisRunManager
 from raven.services.auth import AuthService
 
 SESSION_COOKIE = "raven_session"
@@ -21,6 +22,10 @@ def get_settings_dep(request: Request) -> Settings:
 
 def get_auth(request: Request) -> AuthService:
     return request.app.state.auth
+
+
+def get_runs(request: Request) -> AnalysisRunManager:
+    return request.app.state.runs
 
 
 def get_registry(request: Request) -> Iterator[Session]:
