@@ -30,3 +30,8 @@ The reference numbers in spec sections 6.3 and 6.5b apply only if the owner stil
 - Empty text values are stored as null. Extracted hashes are upper case.
 - Deduplication fingerprint: the 26 fields other than raw_event_ref; the first event is kept; a duplicates file records every removal.
 - Database: timestamps are stored as text (2026-09-13T08:39:49.545Z); raw_event_ref, timestamp and computer are NOT NULL; extra indexes on timestamp and on (event_type, process_id); foreign keys are enforced.
+
+## Design choices made in S5 (2026-09-21)
+
+- Window search of the correlation engine: steps in strict order; after a match the search continues after the last matched event (skip_matched); a group holds exactly the matched events (minimal); the window edge is inclusive. Chosen because only this combination of the 32 tried reproduces the reference numbers of the spec (87 groups, 597 events).
+- Rules use process_id as match key. process_guid is also allowed by the rule schema.
