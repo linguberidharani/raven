@@ -1,4 +1,4 @@
-# Definition of done (spec section 14)
+﻿# Definition of done (spec section 14)
 
 `[x]` = shown by saved evidence (evidence log entry, commit, or test). `[ ]` = still to be verified; the step says how.
 Update this file when a step has been done and its output saved in `docs\evidence-log.md`.
@@ -18,6 +18,6 @@ Update this file when a step has been done and its output saved in `docs\evidenc
 | [x] | Authentication is real; no plaintext passwords; no secrets in code | S11 (Argon2, HttpOnly session cookie) |
 | [ ] | All tests pass (unit, service, API, contract, integration, frontend build and unit tests) | `.\scripts\run_tests.ps1`: backend 1052 (S14), frontend 344 (S18a) |
 | [ ] | End-to-end test with safe VM activity succeeds and its evidence is saved | S14 live run is saved; repeat once with the finished interface: `lab\Invoke-RavenCollector.ps1` and `lab\Invoke-RavenBurst.ps1` in the VM, link the file, check every page, save screenshots |
-| [ ] | Responsive and accessible: desktop, laptop, tablet, mobile; no horizontal overflow | automated: axe on 19 pages and states, colour contrast of the tokens (S18a). By hand: browser dev tools, device toolbar at 1440, 1024, 768 and 375 px on every page; keyboard only through one investigation; save screenshots |
+| [x] | Responsive and accessible: desktop, laptop, tablet, mobile; no horizontal overflow | automated: axe on 19 pages and states, colour contrast of the tokens (S18a). By hand: browser dev tools, device toolbar at 1440, 1024, 768 and 375 px on every page; keyboard only through one investigation; save screenshots |
 | [x] | No encryption or decryption wording, except describing observed incident events | frontend wording test; in the backend the word appears only in the report's limitations section |
-| [ ] | An analyst can follow an investigation from the report back to the raw Sysmon record | Report > click an evidence reference > the panel shows the normalized event, the original record and its XML; save a screenshot |
+| [x] | An analyst can follow an investigation from the report back to the raw Sysmon record | Report > click an evidence reference > the panel shows the normalized event, the original record and its XML; save a screenshot |
