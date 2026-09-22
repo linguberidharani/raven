@@ -129,7 +129,7 @@ function Invoke-Pass {
             $last = 0
         }
     }
-    $events = Get-NewEvents $last
+    $events = @(Get-NewEvents $last)
     if ($events.Count -eq 0) { return 0 }
 
     $lines = New-Object System.Collections.Generic.List[string]
