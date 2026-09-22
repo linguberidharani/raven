@@ -196,3 +196,10 @@ Only real output is recorded here. Nothing is marked passed without it.
 - Found in the browser: after sign out the address was /login?next=%2Fprofile, so signing in again went back to the profile. Fixed in S16a (an explicit sign out does not keep the page).
 - Not seen: the registration page, the mobile drawer and the workflow links of an investigation in the browser (covered by the tests only).
 - Result: passed
+
+### S18 End-to-end run with the finished interface, 2026-09-22
+
+- Fixed a real bug found during this run: lab\Invoke-RavenCollector.ps1 crashed every time it caught up to real time and found no new events (PowerShell unrolls an empty array `return @()` across a function boundary into $null; the call site did not wrap it with `@()`, so `$events.Count` failed under Strict-Mode). Fixed by wrapping the call site: `$events = @(Get-NewEvents $last)`. Reproduced and confirmed in isolation before and after the fix. Commit 2a5b41a.
+- Live run on INV-2026-002 (RAVEN-Windows-Lab), continuing the S14 investigation: the fixed collector ran continuously in the VM without crashing through a catch-up burst (500/500/500/500/203/8/5 events) and then idled cleanly with no new events, which is exactly the condition that used to crash it. Invoke-RavenCleanup.ps1 then Invoke-RavenBurst.ps1 (60 files, exit code 0) were run again in the VM; the host picked up the new records automatically and ran the analysis by itself (Evidence: 424 to 3,667 raw records, 3,605 stored, 1 of 1 files ready, analysis completed in 2.5 s).
+- Checked in the browser: Detection 233 groups from 2 of 3 rules (up from 87); Timeline filtered on "raventest" shows 174 matching events with the real burst paths (C:\RavenLab\burst\burst_0001.raventest by WindowsPowerShell.exe, PID 3504), correlated by R001 and R003; RARF and Report both list more than one attack session, and the new session from this burst (34 groups) is kept separate from the original S14 session (87 groups) rather than merged into it.
+- Result: passed
