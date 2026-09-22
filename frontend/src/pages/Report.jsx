@@ -10,15 +10,17 @@ import { SessionPicker } from '../components/SessionPicker';
 import { EmptyState, ErrorBanner, Skeleton } from '../components/States';
 import { useCase } from '../cases/CaseContext';
 import { useApi } from '../hooks/useApi';
-import { formatNumber, formatTimestamp } from '../utils/format';
+import { formatClock, formatNumber, formatTimestamp } from '../utils/format';
 import { investigationPath } from '../utils/navigation';
 
 const BASIS_LABEL = { observed: 'Observed evidence', derived: 'Derived / interpreted' };
 
-/** RAVEN-R003:4:2026-09-13T08:39:49.545Z -> R003:4 */
+/** RAVEN-R003:6844:2026-09-13T08:39:49.545Z -> R003:6844 \u00b7 08:39:49 (the time tells apart groups of one process) */
 function groupLabel(groupId) {
-  const parts = String(groupId).split(':');
-  return `${parts[0].replace(/^RAVEN-/, '')}:${parts[1] ?? ''}`;
+  const match = /^([^:]+):([^:]+):(.+)$/.exec(String(groupId));
+  if (!match) return String(groupId);
+  const clock = formatClock(match[3]);
+  return `${match[1].replace(/^RAVEN-/, '')}:${match[2]}${clock === '\u2014' ? '' : ` \u00b7 ${clock.slice(0, 8)}`}`;
 }
 
 function Finding({ finding }) {

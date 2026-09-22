@@ -7,12 +7,13 @@
   --surface-2: #17202e;
   --border: #1b2637;
   --border-strong: #263349;
+  --control-border: #5b6b86;
   --text: #e8edf6;
   --text-2: #a5b1c6;
   --text-3: #7d8aa1;
   --accent: #5a9df5;
   --accent-button: #2f6fd6;
-  --accent-button-hover: #3a7be6;
+  --accent-button-hover: #2b66cc;
 
   --sev-critical: #f0605d;
   --sev-high: #f2903f;

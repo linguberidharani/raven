@@ -57,6 +57,26 @@ body {
   border-radius: 999px;
 }
 
+/* Small controls grow to 44 px on touch screens */
+@media (pointer: coarse) {
+  .btn.small,
+  button.ref-chip,
+  .json-toggle,
+  .rule-summary button,
+  .select.compact {
+    min-height: 44px;
+  }
+  .tree-toggle {
+    width: 44px;
+    height: 44px;
+    margin-top: 0;
+  }
+}
+
+.btn.small {
+  min-height: 36px;
+}
+
 /* Cards lift a little when the pointer is over them */
 .stat-card,
 .rule-card,

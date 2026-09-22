@@ -55,7 +55,7 @@ describe('Report: the document', () => {
     const [observed, derived] = section('executive_summary').getAllByRole('article');
     expect(within(observed).getAllByRole('button', { name: /^Open event/ }).map((b) => b.textContent)).toEqual(['1:1', '1:4']);
     const chips = derived.querySelectorAll('.group-chip');
-    expect([...chips].map((chip) => chip.textContent)).toEqual(['R001:1001', 'R003:1001', 'R003:1001']);
+    expect([...chips].map((chip) => chip.textContent)).toEqual(['R001:1001 \u00b7 08:39:49', 'R003:1001 \u00b7 08:39:51', 'R003:1001 \u00b7 08:40:01']);
     expect(chips[0]).toHaveAttribute('title', 'RAVEN-R001:1001:2026-09-13T08:39:49.545Z');
     await userEvent.setup().click(within(observed).getByRole('button', { name: 'Open event 1:1' }));
     expect(await screen.findByRole('dialog', { name: /Event 1:1/ })).toBeInTheDocument();

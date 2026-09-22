@@ -108,14 +108,16 @@ function Dropzone({ investigationId, onUploaded }) {
           }}
         />
       </div>
-      <ul className="upload-results" role="status" aria-live="polite">
-        {results.map((result, index) => (
-          <li key={`${result.name}-${index}`} className={result.ok ? 'ok' : 'bad'}>
-            <span className="mono">{result.name}</span>
-            <span>{result.ok ? 'Uploaded' : result.message}</span>
-          </li>
-        ))}
-      </ul>
+      <div role="status" aria-live="polite">
+        <ul className="upload-results">
+          {results.map((result, index) => (
+            <li key={`${result.name}-${index}`} className={result.ok ? 'ok' : 'bad'}>
+              <span className="mono">{result.name}</span>
+              <span>{result.ok ? 'Uploaded' : result.message}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

@@ -135,7 +135,7 @@ function EventPanel({ investigationId, eventRef, onClose }) {
   return (
     <>
       <div className="panel-backdrop" onClick={onClose} aria-hidden="true" />
-      <aside className="event-panel" role="dialog" aria-modal="true" aria-labelledby="event-panel-title" ref={panel} onKeyDown={trap}>
+      <div className="event-panel" role="dialog" aria-modal="true" aria-labelledby="event-panel-title" ref={panel} onKeyDown={trap}>
         <div className="panel-header">
           <div>
             <h2 id="event-panel-title">
@@ -170,7 +170,7 @@ function EventPanel({ investigationId, eventRef, onClose }) {
           {missing ? <p className="faint">Records that were removed as duplicates are not stored, so they have no details.</p> : null}
           {data ? <PanelBody data={data} /> : null}
         </div>
-      </aside>
+      </div>
     </>
   );
 }
