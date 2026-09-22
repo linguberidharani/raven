@@ -1,27 +1,54 @@
 <#
 .SYNOPSIS
-  Runs the RAVEN test suite with the project virtual environment.
-.EXAMPLE
-  .\scripts\run_tests.ps1
-  .\scripts\run_tests.ps1 -m "not slow"
+    Runs the tests of RAVEN: the backend (pytest) and the frontend (lint, unit tests, build).
+.PARAMETER Backend
+    Only the backend tests.
+.PARAMETER Frontend
+    Only the frontend checks.
 #>
-$ErrorActionPreference = 'Stop'
-$Root = Split-Path -Parent $PSScriptRoot
-$Python = Join-Path $Root 'venv\Scripts\python.exe'
+[CmdletBinding()]
+param(
+    [switch]$Backend,
+    [switch]$Frontend
+)
 
-if (-not (Test-Path -LiteralPath $Python)) {
-    Write-Host "Virtual environment not found: $Python" -ForegroundColor Red
-    Write-Host "Create it from the project root: python -m venv venv" -ForegroundColor Red
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Parent $PSScriptRoot
+$both = -not ($Backend -or $Frontend)
+$failed = @()
+
+if ($Backend -or $both) {
+    $python = Join-Path $root 'venv\Scripts\python.exe'
+    if (-not (Test-Path -LiteralPath $python)) { throw "The Python environment was not found ($python)." }
+    Write-Host '=== Backend: pytest' -ForegroundColor Cyan
+    Push-Location $root
+    try {
+        & $python -m pytest -q
+        if ($LASTEXITCODE -ne 0) { $failed += 'backend tests' }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+if ($Frontend -or $both) {
+    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { throw 'Node.js and npm were not found.' }
+    Push-Location (Join-Path $root 'frontend')
+    try {
+        if (-not (Test-Path -LiteralPath 'node_modules')) { npm ci; if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' } }
+        foreach ($step in @(@('lint', 'run lint'), @('unit tests', 'test'), @('build', 'run build'))) {
+            Write-Host "=== Frontend: $($step[0])" -ForegroundColor Cyan
+            Invoke-Expression "npm $($step[1])"
+            if ($LASTEXITCODE -ne 0) { $failed += "frontend $($step[0])" }
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+if ($failed.Count -gt 0) {
+    Write-Host ('FAILED: ' + ($failed -join ', ')) -ForegroundColor Red
     exit 1
 }
-
-Set-Location $Root
-& $Python -m pytest @args
-$code = $LASTEXITCODE
-
-# pytest exits with 5 when it collects no tests. Accepted only while the suite is empty (S0 to S1).
-if ($code -eq 5) {
-    Write-Host "pytest collected 0 tests (exit code 5). Expected until the first tests arrive in S2." -ForegroundColor Yellow
-    exit 0
-}
-exit $code
+Write-Host 'All checks passed.' -ForegroundColor Green

@@ -1,17 +1,35 @@
 <#
 .SYNOPSIS
-  Starts the RAVEN frontend dev server on http://127.0.0.1:5173 (available from stage S15).
+    Starts the RAVEN frontend (dev server on http://localhost:5173) in this window.
+.DESCRIPTION
+    The dev server forwards /api to the backend on port 8000, so the backend must be running too
+    (scripts\run_backend.ps1, or use scripts\run_all.ps1 to start both).
+    The first time, and whenever node_modules is missing, it installs the packages with "npm ci".
 #>
-$ErrorActionPreference = 'Stop'
-$Root = Split-Path -Parent $PSScriptRoot
-$FrontendDir = Join-Path $Root 'frontend'
+[CmdletBinding()]
+param()
 
-if (-not (Test-Path -LiteralPath (Join-Path $FrontendDir 'package.json'))) {
-    Write-Host "Frontend is not built yet (frontend\package.json arrives in stage S15)." -ForegroundColor Yellow
-    exit 1
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Parent $PSScriptRoot
+$frontend = Join-Path $root 'frontend'
+
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    throw 'Node.js was not found. Install Node.js 20 or newer, then open a new PowerShell window.'
+}
+if (-not (Test-Path -LiteralPath (Join-Path $frontend 'package.json'))) {
+    throw "The frontend folder was not found at $frontend."
 }
 
-Set-Location $FrontendDir
-# npm.cmd avoids the npm.ps1 execution-policy block in new windows.
-& npm.cmd run dev
-exit $LASTEXITCODE
+Push-Location $frontend
+try {
+    if (-not (Test-Path -LiteralPath (Join-Path $frontend 'node_modules'))) {
+        Write-Host 'Installing the frontend packages (npm ci). This takes a minute the first time.'
+        npm ci
+        if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+    }
+    Write-Host 'Starting the frontend on http://localhost:5173 (Ctrl+C stops it).'
+    npm run dev
+}
+finally {
+    Pop-Location
+}

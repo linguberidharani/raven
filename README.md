@@ -1,74 +1,131 @@
 # RAVEN
 
-**Ransomware Attack Visualization and Event Navigator.** *Trace the Attack. Measure the Impact.*
+**Ransomware Attack Visualization and Event Navigator.** RAVEN turns Sysmon telemetry (Windows event logs) into an
+investigation an analyst can follow from the final report back to the raw record: it reads the events, finds
+patterns with explainable rules, rebuilds the attack session, draws the timeline and the impact, and writes a
+report in which every statement is marked as **observed** (recorded in the logs) or **derived** (what RAVEN
+concludes from them).
 
-RAVEN is a defensive cybersecurity investigation platform. It takes real Sysmon telemetry from an isolated Windows 11 lab VM, processes it deterministically, and lets an analyst reconstruct a ransomware-style incident, with every conclusion traceable back to the raw Sysmon record.
+RAVEN describes behaviour. It does not block, stop or remediate anything, and it does not say who did it or why.
 
-RAVEN is not an encryption or decryption tool, not antivirus or EDR, and it uses no generative AI in the analysis path.
+## What you need
 
-The source of truth is `docs\RAVEN_MASTER_SPEC.md`. Decisions taken so far are in `docs\decisions.md`. Real evidence from each stage is logged in `docs\evidence-log.md`.
+| | |
+|---|---|
+| Windows 10 or 11 with PowerShell | every command below is PowerShell |
+| Python 3.11 | one virtual environment, `venv\`, for the whole backend |
+| Node.js 20 or newer (24 is what it was built on) | for the web interface |
+| Git | |
+| VirtualBox with the lab VM | only for the live collector (see `lab\COLLECTOR.md`); EVTX upload works without it |
 
-## Status
+## First-time setup
 
-Built one stage at a time (S0 to S17). The processing pipeline (S2 to S10) is finished and reproduces the reference numbers of the specification. The API, the investigation workspaces and the frontend follow (S11 to S17). The evidence of every stage is in `docs\evidence-log.md`.
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force   # this window only
+Set-Location D:\Projects\RAVEN
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt -r requirements-dev.txt
+Copy-Item .env.example .env
+Set-Location frontend
+npm ci
+Set-Location ..
+```
 
-## Processing pipeline (stages S2 to S10)
+## Run
 
-Each step is a command line tool. Run them from the project root with the venv active. The files can go to any folder (the examples in the evidence log use `data\scratch`).
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+Set-Location D:\Projects\RAVEN
+.\scripts\run_all.ps1
+```
 
-    python -m raven.collectors.evtx_loader <input.evtx> <raw.jsonl>
-    python -m raven.parsers.normalizer <raw.jsonl> <normalized.jsonl> --evidence-id 1
-    python -m raven.parsers.deduplicate <normalized.jsonl> <deduplicated.jsonl> --duplicates <duplicates.jsonl>
-    python -m raven.database.ingest <deduplicated.jsonl> <raven.db> --summary <summary.json>
-    python -m raven.correlation.runner <raven.db> --summary <summary.json>
-    python -m raven.reconstruction.persist <raven.db> --mapping <mapping.json>
-    python -m raven.timeline.persist <raven.db> --summary <summary.json>
-    python -m raven.impact.persist <raven.db> --summary <summary.json>
-    python -m raven.rarf.exporter <raven.db> <output folder>
-    python -m raven.report.generator <RARF-....json> <output folder> --print
-    python -m raven.database.validate <raven.db>
+This starts the backend (`http://127.0.0.1:8000`) and the interface (`http://localhost:5173`), each in its own
+window, waits until both answer and opens the browser. Add `-CheckOnly` to only check that everything is in place,
+`-NoBrowser` to not open the browser.
 
-Every step gives the same result when it is run again.
-## Prerequisites (Windows host)
+Stop it with `.\scripts\stop_all.ps1` (or Ctrl+C in the two windows).
 
-Python 3.11, Node.js LTS, Git, PowerShell. From S1: VirtualBox with a Windows 11 VM running Sysmon.
+To run the two parts by hand, use two windows: `.\venv\Scripts\Activate.ps1` then `.\scripts\run_backend.ps1` in the
+first, and `.\scripts\run_frontend.ps1` in the second. The backend must be up when the interface is used.
 
-## Setup (from a clean clone)
+## Use
 
-    Set-Location D:\Projects\RAVEN
-    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-    python -m venv venv
-    .\venv\Scripts\Activate.ps1
-    python -m pip install -r requirements-dev.txt
-    Copy-Item .env.example .env
+1. Open `http://localhost:5173`, choose **Create an account** (accounts live on this installation only) and sign in.
+2. **Investigations** > **New investigation**, then open it.
+3. **Evidence & Log Upload**: add an `.evtx` file (Sysmon operational log), or link a file that the VM collector writes
+   into the inbox folder. Then **Run analysis**. It runs in the background and shows its ten stages.
+4. Follow the steps in the tabs: **Detection & Correlation**, **Attack Reconstruction**, **Attack Timeline**,
+   **Impact Analysis**, **RARF** (the formal record, as a tree or JSON, with copy and download) and
+   **Investigation Report** (with print or save as PDF).
+5. Every evidence reference such as `2:24459` is a button: it opens the normalized event, the original Sysmon
+   record and its XML. That is how a statement in the report is traced back to the raw record.
 
-## Tests
+Only Sysmon events 1 (process created), 3 (network connection) and 11 (file created) are used for detection.
+Other events are stored and counted, and shown as unsupported, never hidden.
 
-    .\scripts\run_tests.ps1
+## Test
 
-or, with the venv active:
+```powershell
+.\scripts\run_tests.ps1              # backend (pytest) and frontend (lint, unit tests, build)
+.\scripts\run_tests.ps1 -Backend     # only the backend
+.\scripts\run_tests.ps1 -Frontend    # only the frontend
+.\scripts\check_clean_clone.ps1 -WithReference   # clones the repository and runs everything in the clone
+```
 
-    python -m pytest
+The reference EVTX file (`tests\fixtures\sysmon_export.evtx`) is not committed. The tests that need it are skipped when
+it is missing; `-WithReference` copies it into the clone so the whole suite runs.
 
-## Running (available once the stages are built)
+## Configuration
 
-    .\scripts\run_backend.ps1     # from S11, http://127.0.0.1:8000
-    .\scripts\run_frontend.ps1    # from S15, http://127.0.0.1:5173
-    .\scripts\run_all.ps1         # both, in separate windows
+Copy `.env.example` to `.env` and change what you need. The backend reads it at start.
 
-## Layout
+| Setting | Default | Meaning |
+|---|---|---|
+| `RAVEN_ENV` | `development` | `development` also serves the interactive API documentation at `/docs` |
+| `RAVEN_HOST`, `RAVEN_PORT` | `127.0.0.1`, `8000` | keep the loopback address: RAVEN is a local tool |
+| `RAVEN_DATA_DIR` | `data` | registry, investigations, uploaded evidence, RARF and report files |
+| `RAVEN_MAX_UPLOAD_MB` | `200` | largest accepted `.evtx` file |
+| `RAVEN_SESSION_HOURS` | `12` | how long a sign-in lasts |
+| `RAVEN_COOKIE_SECURE` | `false` | `true` only when served over https |
+| `RAVEN_INBOX_DIR` | `data/inbox` | where the VM collector drops JSONL files (the VirtualBox shared folder) |
+| `RAVEN_INBOX_POLL_SECONDS` | `5` | how often new collector data is looked for; `0` switches it off |
 
-- `raven\` the Python package (collectors, parsers, database, correlation, reconstruction, timeline, impact, rarf, report, services, api)
-- `tests\` mirrors `raven\`, plus `api\`, `integration\`, `e2e\`, `fixtures\`
-- `frontend\` the React and Vite app (from S15)
-- `lab\` safe VM test-activity scripts and the Sysmon config (from S1)
-- `scripts\` PowerShell run scripts
-- `docs\` specification, decisions, evidence log
-- `data\` generated at run time, never committed
-- `venv\` the one virtual environment, never committed
+The interface reads `VITE_DATA_SOURCE` from `frontend\.env.local`: `api` (default) is the real backend, `demo` shows
+clearly labelled invented data for design work and is never the default.
 
-## Conventions
+## Folders
 
-- PowerShell only. No hard-coded drive letters in code.
-- `.env`, `data\`, `venv\` and `*.evtx` are never committed.
-- Lab activity is harmless only. No real ransomware, no attacks on external systems.
+| Folder | Content |
+|---|---|
+| `raven\` | the Python package: collectors, parsers, database, correlation, reconstruction, timeline, impact, RARF, report, services, API |
+| `frontend\` | the web interface (React, Vite); see `frontend\README.md` |
+| `scripts\` | `run_all`, `run_backend`, `run_frontend`, `stop_all`, `run_tests`, `check_clean_clone` |
+| `lab\` | scripts for the Windows lab VM: safe test activity, the Sysmon collector |
+| `tests\` | unit, service, API, contract and integration tests |
+| `docs\` | the specification, `api-contract.md`, `evidence-log.md`, `final-checklist.md` |
+| `data\` | generated (not committed): registry, investigations, inbox |
+
+## Data and privacy
+
+- Passwords are stored as Argon2 hashes; the session is a random token in an HttpOnly cookie, kept as a hash on the
+  server. There are no secrets in the code.
+- The server listens on the loopback address only. Do not expose it to a network without adding transport security
+  and reviewing the access rules: every signed-in analyst can see every investigation.
+- Evidence and results are real telemetry. Paths in Windows events contain user names; treat exported RARF and
+  report files, and screenshots, accordingly.
+- `data\` and `.env` are never committed.
+
+## If something does not work
+
+| Problem | What to do |
+|---|---|
+| "running scripts is disabled" | run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force` in that window |
+| Port 8000 or 5173 is in use | `.\scripts\stop_all.ps1`, or close the window that uses it |
+| The interface says the server cannot be reached | the backend is not running: start it (`run_backend.ps1`) and reload the page |
+| `npm ci` fails with EPERM | a dev server still runs: stop it (Ctrl+C), then run `npm ci` again |
+| Tests are slow the first time after `npm ci` | antivirus scanning `node_modules`; wait, or exclude `frontend\node_modules` |
+| An analysis fails | the Evidence page shows the reason for the stage that failed; fix the file and run again |
+
+More: `docs\api-contract.md` (every endpoint), `lab\COLLECTOR.md` (the VM collector), `docs\evidence-log.md` (what was
+verified in each stage), `docs\final-checklist.md` (the definition of done).
