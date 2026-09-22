@@ -6,8 +6,8 @@ Update this file when a step has been done and its output saved in `docs\evidenc
 | | Item | Evidence or how to verify |
 |---|---|---|
 | [x] | One folder holds frontend, backend, processing, tests, scripts, docs and configuration | repository tree; `git ls-files` |
-| [ ] | `scripts\run_all.ps1` starts everything; the documented commands work from a clean clone plus `.env` | run `.\scripts\run_all.ps1 -CheckOnly`, then `.\scripts\run_all.ps1`; then `.\scripts\check_clean_clone.ps1 -WithReference` |
-| [ ] | Dependencies from `requirements.txt`; lock file recorded | `Test-Path requirements.lock.txt`; if missing: `.\venv\Scripts\python.exe -m pip freeze \| Set-Content requirements.lock.txt -Encoding utf8` and commit |
+| [x] | `scripts\run_all.ps1` starts everything; the documented commands work from a clean clone plus `.env` | run `.\scripts\run_all.ps1 -CheckOnly`, then `.\scripts\run_all.ps1`; then `.\scripts\check_clean_clone.ps1 -WithReference` |
+| [x] | Dependencies from `requirements.txt`; lock file recorded | `Test-Path requirements.lock.txt`; if missing: `.\venv\Scripts\python.exe -m pip freeze \| Set-Content requirements.lock.txt -Encoding utf8` and commit |
 | [x] | Database and registry are created automatically; creation is idempotent | evidence log S4 (re-ingest inserts 0), S12 |
 | [x] | Real telemetry enters: EVTX upload and VM collector | S12 (reference file uploaded, same numbers); S14 (live VM: 424 records, no loss) |
 | [x] | Normalization and deduplication reproduce the reference numbers | S3 (2816, 1984 OK, 832 unsupported), S4 (2719) |
