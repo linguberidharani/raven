@@ -1,0 +1,13 @@
+rule_id: "RAVEN-R004"
+rule_name: "README-named File Created"
+description: "A file is created whose name contains \"README\" (case-insensitive), a naming pattern used by some ransomware families for the message they leave behind, alongside many legitimate uses (software, installers, archives). This describes an observed file name only; it does not show the file's content, and a match alone is weak evidence by itself."
+steps:
+  - event_type: "file_create"
+    min_count: 1
+    field_match:
+      field: "file_path"
+      contains: "README"
+match_key: "process_id"
+time_window_seconds: 60
+severity: "MEDIUM"
+confidence: 55

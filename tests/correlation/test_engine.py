@@ -10,7 +10,7 @@ from raven.correlation.engine import (
     find_groups,
     timestamp_to_ms,
 )
-from raven.correlation.rule_schema import Rule, Step
+from raven.correlation.rule_schema import SHIPPED_RULES_DIR, FieldMatch, Rule, Step, load_rules
 
 BASE = "2026-09-13T08:39:"
 
@@ -242,3 +242,255 @@ def test_explain_group_says_why_it_matched():
         "event_count": 6,
         "event_refs": ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6"],
     }
+
+
+# ---------------------------------------------------------------- field_match (optional step condition)
+
+
+def make_file_events(spec, pid=1224):
+    """spec: list of (seconds, file_path) -> file_create EventPoints."""
+    return [EventPoint.create(n, f"1:{n}", "file_create", ts(seconds), pid, file_path=path) for n, (seconds, path) in enumerate(spec, start=1)]
+
+
+def make_process_events(spec, pid=1224):
+    """spec: list of (seconds, command_line) -> process_creation EventPoints."""
+    return [EventPoint.create(n, f"1:{n}", "process_creation", ts(seconds), pid, command_line=cmd) for n, (seconds, cmd) in enumerate(spec, start=1)]
+
+
+RANSOM_NOTE_RULE = Rule(
+    "TEST-NOTE", "Ransom note", "d",
+    (Step("file_create", 1, FieldMatch("file_path", "README")),),
+    "process_id", 60, "HIGH", 80,
+)
+
+VSSADMIN_RULE = Rule(
+    "TEST-VSS", "Shadow copy delete", "d",
+    (Step("process_creation", 1, FieldMatch("command_line", "vssadmin")),),
+    "process_id", 60, "HIGH", 80,
+)
+
+
+# 1. A matching file_path pattern produces a match.
+def test_a_matching_file_path_field_match_produces_a_group():
+    events = make_file_events([(0, r"C:\Users\lab\Desktop\README_DECRYPT.txt")])
+    (group,) = find_groups(RANSOM_NOTE_RULE, events, DEFAULT)
+    assert group.event_row_ids == (1,)
+    assert group.step_counts == (1,)
+
+
+def test_a_matching_file_path_field_match_is_case_insensitive():
+    events = make_file_events([(0, r"C:\Users\lab\Desktop\readme_decrypt.TXT")])
+    (group,) = find_groups(RANSOM_NOTE_RULE, events, DEFAULT)
+    assert group.event_row_ids == (1,)
+
+
+# 2. A non-matching file_path produces no match.
+def test_a_non_matching_file_path_field_match_produces_no_group():
+    events = make_file_events([(0, r"C:\Users\lab\Documents\report.docx")])
+    assert find_groups(RANSOM_NOTE_RULE, events, DEFAULT) == []
+
+
+def test_a_null_file_path_does_not_satisfy_a_field_match():
+    events = [EventPoint.create(1, "1:1", "file_create", ts(0), 1224, file_path=None)]
+    assert find_groups(RANSOM_NOTE_RULE, events, DEFAULT) == []
+
+
+# 3. A matching command_line pattern produces a match.
+def test_a_matching_command_line_field_match_produces_a_group():
+    events = make_process_events([(0, r"C:\Windows\System32\vssadmin.exe delete shadows /all /quiet")])
+    (group,) = find_groups(VSSADMIN_RULE, events, DEFAULT)
+    assert group.event_row_ids == (1,)
+
+
+def test_a_matching_command_line_field_match_is_case_insensitive():
+    events = make_process_events([(0, "VSSADMIN.EXE DELETE SHADOWS /ALL /QUIET")])
+    (group,) = find_groups(VSSADMIN_RULE, events, DEFAULT)
+    assert group.event_row_ids == (1,)
+
+
+# 4. A non-matching command_line produces no match.
+def test_a_non_matching_command_line_field_match_produces_no_group():
+    events = make_process_events([(0, r"C:\Windows\System32\notepad.exe")])
+    assert find_groups(VSSADMIN_RULE, events, DEFAULT) == []
+
+
+def test_a_null_command_line_does_not_satisfy_a_field_match():
+    events = [EventPoint.create(1, "1:1", "process_creation", ts(0), 1224, command_line=None)]
+    assert find_groups(VSSADMIN_RULE, events, DEFAULT) == []
+
+
+# A rule can mix a field_match step with a plain step, in the same strict sequence.
+def test_field_match_combines_with_a_plain_step_in_sequence():
+    rule = Rule(
+        "TEST-MIX", "Mix", "d",
+        (Step("process_creation", 1), Step("file_create", 1, FieldMatch("file_path", "README"))),
+        "process_id", 60, "HIGH", 80,
+    )
+    events = [
+        EventPoint.create(1, "1:1", "process_creation", ts(0), 1224),
+        EventPoint.create(2, "1:2", "file_create", ts(1), 1224, file_path=r"C:\Temp\notes.txt"),
+        EventPoint.create(3, "1:3", "file_create", ts(2), 1224, file_path=r"C:\Temp\README.txt"),
+    ]
+    (group,) = find_groups(rule, events, DEFAULT)
+    assert group.event_row_ids == (1, 3)  # the non-matching file_create (2) is skipped, not counted
+
+
+def test_field_match_is_honoured_in_loose_step_order_too():
+    # Mirrors the existing test_strict_order_needs_each_step_after_the_previous_one (R002), but the
+    # last step also carries a field_match: the matching file_create (the README) sits chronologically
+    # BEFORE the network_connection step that must precede it in a strict sequence, so strict order
+    # must fail to find it there while loose order (counts only, any order) must still find it.
+    rule = Rule(
+        "TEST-ORDER", "Order", "d",
+        (Step("process_creation", 1), Step("network_connection", 1), Step("file_create", 1, FieldMatch("file_path", "README"))),
+        "process_id", 60, "HIGH", 80,
+    )
+    events = [
+        EventPoint.create(1, "1:1", "process_creation", ts(0), 1224),
+        EventPoint.create(2, "1:2", "file_create", ts(5), 1224, file_path=r"C:\Temp\README.txt"),
+        EventPoint.create(3, "1:3", "network_connection", ts(10), 1224),
+    ]
+    assert find_groups(rule, events, EngineOptions(step_order="strict")) == []
+    (group,) = find_groups(rule, events, EngineOptions(step_order="loose"))
+    # matched indexes are sorted before being returned (engine.py: "return sorted(matched)"), so the
+    # row ids come back in index order, not in the order each step happened to pick them.
+    assert group.event_row_ids == (1, 2, 3)
+
+
+def test_field_match_is_honoured_in_window_membership_and_never_silently_ignored():
+    rule = Rule(
+        "TEST-NOTE-W", "Ransom note", "d",
+        (Step("file_create", 1, FieldMatch("file_path", "README")),),
+        "process_id", 60, "HIGH", 80,
+    )
+    events = make_file_events(
+        [
+            (0, r"C:\Temp\README.txt"),
+            (1, r"C:\Temp\unrelated.txt"),  # same event_type, does not satisfy field_match
+            (2, r"C:\Temp\README2.txt"),
+        ]
+    )
+    (first_minimal, second_minimal) = find_groups(rule, events, EngineOptions(membership="minimal"))
+    (first_window,) = find_groups(rule, events, EngineOptions(membership="window"))
+    assert first_minimal.event_row_ids == (1,)
+    # "window" holds every event that satisfies a step of the rule -- the unrelated file_create (2)
+    # does not satisfy the rule's only step (its field_match fails), so it stays out even though its
+    # event_type matches. This is the "never silently ignored" requirement.
+    assert first_window.event_row_ids == (1, 3)
+
+
+def test_explain_group_reports_the_field_match_of_a_step():
+    events = make_file_events([(0, r"C:\Temp\README.txt")])
+    (group,) = find_groups(RANSOM_NOTE_RULE, events, DEFAULT)
+    explanation = explain_group(RANSOM_NOTE_RULE, group, {e.row_id: e for e in events})
+    assert explanation["steps"] == [
+        {"event_type": "file_create", "required": 1, "found": 1, "field_match": {"field": "file_path", "contains": "README"}}
+    ]
+
+
+def test_explain_group_omits_field_match_for_a_plain_step_unchanged_shape():
+    # Same assertion as test_explain_group_says_why_it_matched (R001, no field_match anywhere):
+    # proves the "steps" shape for an ordinary rule is byte-identical to before field_match existed.
+    events = make_events([("process_creation", 10)] + [("file_create", 20 + i) for i in range(5)])
+    (group,) = find_groups(R001, events, DEFAULT)
+    explanation = explain_group(R001, group, {e.row_id: e for e in events})
+    assert explanation["steps"] == [
+        {"event_type": "process_creation", "required": 1, "found": 1},
+        {"event_type": "file_create", "required": 5, "found": 5},
+    ]
+    assert all("field_match" not in step for step in explanation["steps"])
+
+
+# 5. Existing R001/R002/R003 behaviour remains unchanged: every pre-existing test above still
+# passes unmodified against the new engine.py (see the full run below), and these three repeat the
+# shipped rules' exact defining numbers from the spec as an explicit, named regression check.
+def test_r001_r002_r003_shapes_are_exactly_as_before_field_match():
+    assert R001.steps == (Step("process_creation", 1), Step("file_create", 5))
+    assert R002.steps == (Step("process_creation", 1), Step("network_connection", 1), Step("file_create", 1))
+    assert R003.steps == (Step("file_create", 10),)
+    for rule in (R001, R002, R003):
+        assert all(step.field_match is None for step in rule.steps)
+
+
+# ---------------------------------------------------------------- R004 (the shipped README-pattern rule)
+
+R004 = next(rule for rule in load_rules(SHIPPED_RULES_DIR) if rule.rule_id == "RAVEN-R004")
+
+
+def test_r004_is_shipped_with_exactly_one_field_match_step():
+    assert R004.steps == (Step("file_create", 1, FieldMatch("file_path", "README")),)
+    assert R004.severity == "MEDIUM" and R004.confidence == 55
+
+
+def test_r004_matches_a_readme_named_file_and_explains_why():
+    events = make_file_events([(0, r"C:\Users\lab\Desktop\README_RESTORE_FILES.txt")])
+    (group,) = find_groups(R004, events, DEFAULT)
+    assert group.rule_id == "RAVEN-R004"
+    explanation = explain_group(R004, group, {e.row_id: e for e in events})
+    assert explanation["steps"] == [
+        {"event_type": "file_create", "required": 1, "found": 1, "field_match": {"field": "file_path", "contains": "README"}}
+    ]
+
+
+def test_r004_does_not_match_an_ordinary_file_create():
+    events = make_file_events([(0, r"C:\Users\lab\Documents\budget.xlsx")])
+    assert find_groups(R004, events, DEFAULT) == []
+
+
+def test_r004_does_not_match_a_legitimate_readme_from_installed_software():
+    # The honest cost of a narrow substring rule: it cannot distinguish a ransom note from an
+    # ordinary software README. RAVEN says so in the rule's own description rather than hiding it.
+    events = make_file_events([(0, r"C:\Program Files\SomeApp\README.txt")])
+    (group,) = find_groups(R004, events, DEFAULT)
+    assert group.rule_id == "RAVEN-R004"  # it DOES match -- this is the rule's known limitation, not a bug
+
+
+# ---------------------------------------------------------------- R005 (the shipped vssadmin-delete rule)
+
+R005 = next(rule for rule in load_rules(SHIPPED_RULES_DIR) if rule.rule_id == "RAVEN-R005")
+
+
+def test_r005_is_shipped_with_exactly_one_field_match_step():
+    assert R005.steps == (Step("process_creation", 1, FieldMatch("command_line", "delete shadows")),)
+    assert R005.severity == "HIGH" and R005.confidence == 70
+
+
+def test_r005_matches_a_vssadmin_delete_command_and_explains_why():
+    events = make_process_events([(0, r"C:\Windows\System32\vssadmin.exe delete shadows /all /quiet")])
+    (group,) = find_groups(R005, events, DEFAULT)
+    assert group.rule_id == "RAVEN-R005"
+    explanation = explain_group(R005, group, {e.row_id: e for e in events})
+    assert explanation["steps"] == [
+        {"event_type": "process_creation", "required": 1, "found": 1, "field_match": {"field": "command_line", "contains": "delete shadows"}}
+    ]
+
+
+def test_r005_matches_case_insensitively():
+    events = make_process_events([(0, "VSSADMIN.EXE DELETE SHADOWS /ALL /QUIET")])
+    (group,) = find_groups(R005, events, DEFAULT)
+    assert group.rule_id == "RAVEN-R005"
+
+
+def test_r005_does_not_match_an_ordinary_process():
+    events = make_process_events([(0, r"C:\Windows\System32\notepad.exe")])
+    assert find_groups(R005, events, DEFAULT) == []
+
+
+def test_r005_does_not_match_a_harmless_vssadmin_subcommand():
+    # The precise two-word pattern ("vssadmin delete") is the point: listing or resizing shadow storage
+    # uses vssadmin too but is not the destructive subcommand, and must not be flagged.
+    events = make_process_events(
+        [
+            (0, r"C:\Windows\System32\vssadmin.exe list shadows"),
+            (1, r"C:\Windows\System32\vssadmin.exe resize shadowstorage /for=C: /maxsize=10%"),
+        ]
+    )
+    assert find_groups(R005, events, DEFAULT) == []
+
+
+def test_r005_does_not_match_a_different_tool_that_also_deletes_shadow_copies():
+    # The honest cost of a narrow substring rule: wmic-based deletion (a real alternative technique
+    # some ransomware families use instead of vssadmin) is not covered by this one pattern. RAVEN's own
+    # rule description does not claim otherwise -- this is a documented limitation, not a bug.
+    events = make_process_events([(0, "wmic.exe shadowcopy delete")])
+    assert find_groups(R005, events, DEFAULT) == []

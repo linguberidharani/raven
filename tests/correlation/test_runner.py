@@ -78,12 +78,17 @@ def counts(factory):
 def test_groups_are_found_and_stored(tmp_path, factory):
     summary = run_correlation(factory, tmp_path / "summary.json")
     by_rule = {rule["rule_id"]: rule["groups"] for rule in summary["rules"]}
-    assert by_rule == {"RAVEN-R001": 1, "RAVEN-R002": 1, "RAVEN-R003": 0}
+    # R004 (README-named File Created) is now a shipped rule too; none of the synthetic rows here set
+    # file_path, so it correctly finds nothing -- the fixture was never meant to exercise it.
+    # R004 (README-named File Created) and R005 (Shadow Copy Deletion Command) are shipped rules too;
+    # none of the synthetic rows here set file_path or command_line, so both correctly find nothing --
+    # this fixture predates both and was never meant to exercise them.
+    assert by_rule == {"RAVEN-R001": 1, "RAVEN-R002": 1, "RAVEN-R003": 0, "RAVEN-R004": 0, "RAVEN-R005": 0}
     assert summary["totals"]["groups"] == 2
     assert summary["totals"]["correlated_event_rows"] == 6 + 3
     assert summary["totals"]["distinct_events"] == 6 + 3
     assert summary["totals"]["distinct_events_by_type"] == {"file_create": 6, "network_connection": 1, "process_creation": 2}
-    assert counts(factory) == (9, 3)
+    assert counts(factory) == (9, 5)
 
 
 def test_the_supported_events_examined_exclude_unsupported_ones(tmp_path, factory):
@@ -170,6 +175,8 @@ def test_results_of_an_earlier_run_are_replaced(tmp_path, factory):
         "Mass File Modification Burst": False,
         "Process Network File Stager Pattern": False,
         "Sustained File Creation Burst": True,
+        "README-named File Created": False,
+        "Shadow Copy Deletion Command": False,
     }
 
 
@@ -183,7 +190,10 @@ def test_a_changed_rule_definition_is_updated_in_place(factory):
         row = session.scalars(select(CorrelationRule).where(CorrelationRule.rule_name == "Mass File Modification Burst")).one()
         assert row.description == "new description"
         assert json.loads(row.rule_definition)["time_window_seconds"] == 30
-        assert session.scalar(select(func.count()).select_from(CorrelationRule)) == 3
+        # the five shipped rules were registered by the first run_correlation(factory, None) call above
+        # (its default rules=None loads every rule in the shipped folder); the second call only changes
+        # R001's own row in place, so the table still holds all five.
+        assert session.scalar(select(func.count()).select_from(CorrelationRule)) == 5
 
 
 def test_other_options_change_the_result(tmp_path, factory):
@@ -198,7 +208,9 @@ def test_no_supported_events_gives_no_groups_and_still_a_summary(tmp_path):
         summary = run_correlation(factory, tmp_path / "s.json")
         assert summary["totals"] == {"groups": 0, "correlated_event_rows": 0, "distinct_events": 0, "distinct_events_by_type": {}}
         assert (tmp_path / "s.json").is_file()
-        assert counts(factory) == (0, 3)
+        # all five shipped rules still get registered (and disabled-by-default-enabled=True, since each
+        # matched zero groups is irrelevant to registration -- see _sync_rules), even with no events at all.
+        assert counts(factory) == (0, 5)
     finally:
         factory.kw["bind"].dispose()
 

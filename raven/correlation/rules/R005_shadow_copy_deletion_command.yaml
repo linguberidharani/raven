@@ -1,0 +1,13 @@
+rule_id: "RAVEN-R005"
+rule_name: "Shadow Copy Deletion Command"
+description: "A process is created whose command line contains \"delete shadows\" (case-insensitive), the Volume Shadow Copy Service subcommand used to remove shadow copies and inhibit file recovery, a well-documented ransomware technique. This describes an observed command line only; it does not show whether the deletion succeeded or the purpose of the process. The same command has rare legitimate uses (disk cleanup, backup rotation scripts), so a match alone is not proof of ransomware."
+steps:
+  - event_type: "process_creation"
+    min_count: 1
+    field_match:
+      field: "command_line"
+      contains: "delete shadows"
+match_key: "process_id"
+time_window_seconds: 60
+severity: "HIGH"
+confidence: 70
