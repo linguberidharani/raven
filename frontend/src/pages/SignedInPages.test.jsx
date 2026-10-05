@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { DASHBOARD, EMPTY_DASHBOARD, HEALTH, INVESTIGATION, USER } from '../test/fixtures';
+import { DASHBOARD, EMPTY_DASHBOARD, INVESTIGATION, USER } from '../test/fixtures';
 import { caseRoutes } from '../test/routes';
 import { mockApi } from '../test/mockApi';
 import { renderApp } from '../test/render';
@@ -100,6 +100,20 @@ describe('Dashboard', () => {
     expect(card.getByRole('link', { name: 'Sustained File Creation Burst' })).toHaveAttribute('href', '/investigations/1/detection');
     expect(card.getByText('INV-2026-001 \u00b7 2026-09-13 08:39:49 UTC \u00b7 10 events')).toBeInTheDocument();
     expect(card.getByText('High')).toBeInTheDocument();
+    expect(card.queryByRole('button', { name: /View more/ })).not.toBeInTheDocument();
+  });
+
+  it('shows only the first alerts until View more is used', async () => {
+    const alerts = Array.from({ length: 5 }, (_, index) => ({ ...DASHBOARD.alerts[0], group_id: `g${index}`, rule_name: `Rule ${index}` }));
+    mockApi({ ...me, 'GET /api/dashboard': { body: { ...DASHBOARD, alerts } } });
+    renderApp('/dashboard');
+    const card = within((await screen.findByRole('heading', { name: 'Important alerts' })).closest('section'));
+    expect(card.getAllByRole('listitem')).toHaveLength(3);
+    const toggle = card.getByRole('button', { name: 'View more (2)' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.setup().click(toggle);
+    expect(card.getAllByRole('listitem')).toHaveLength(5);
+    expect(card.getByRole('button', { name: 'View less' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('says so when there are no alerts, no activity and no queue', async () => {
@@ -126,6 +140,16 @@ describe('Dashboard', () => {
     expect(items).toHaveLength(2);
     expect(within(items[0]).getByRole('link', { name: 'Analysis completed for INV-2026-001' })).toHaveAttribute('href', '/investigations/1/evidence');
     expect(items[0]).toHaveTextContent('INV-2026-001 \u00b7 2026-09-21 10:20:00 UTC');
+  });
+
+  it('shows only the first activity items until View more is used', async () => {
+    const recent_activity = Array.from({ length: 5 }, (_, index) => ({ ...DASHBOARD.recent_activity[0], time: `2026-09-21T10:2${index}:00.000Z`, text: `Event ${index}` }));
+    mockApi({ ...me, 'GET /api/dashboard': { body: { ...DASHBOARD, recent_activity } } });
+    renderApp('/dashboard');
+    const card = within((await screen.findByRole('heading', { name: 'Recent activity' })).closest('section'));
+    expect(card.getAllByRole('listitem')).toHaveLength(3);
+    await userEvent.setup().click(card.getByRole('button', { name: 'View more (2)' }));
+    expect(card.getAllByRole('listitem')).toHaveLength(5);
   });
 
   it('shows the findings by severity as bars', async () => {
@@ -222,40 +246,12 @@ describe('Profile', () => {
     await userEvent.setup().click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign out' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Signing out failed');
   });
-});
 
-describe('Settings', () => {
-  it('shows the connection and the backend status', async () => {
-    mockApi({ ...me, 'GET /api/health': { body: HEALTH } });
-    renderApp('/settings');
-    expect(await screen.findByText('raven-api 0.1.0')).toBeInTheDocument();
-    expect(screen.getByText('RAVEN backend (real data)')).toBeInTheDocument();
-    expect(screen.getByText('Correlation rules loaded').nextElementSibling).toHaveTextContent('3');
-    expect(screen.getByText('RARF version').nextElementSibling).toHaveTextContent('1.0');
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
-    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-  });
-
-  it('shows an error when the backend status cannot be read', async () => {
-    mockApi({ ...me, 'GET /api/health': { status: 503, body: { detail: 'Degraded', code: 'degraded', request_id: 'r' } } });
-    renderApp('/settings');
-    expect(await screen.findByRole('alert')).toHaveTextContent('The backend status could not be read');
-  });
-
-  it('clears the local interface state and says how much', async () => {
-    mockApi({ ...me, 'GET /api/health': { body: HEALTH } });
-    window.localStorage.setItem('raven.sidebar', 'x');
-    window.localStorage.setItem('unrelated', 'keep');
-    renderApp('/settings');
-    const user = userEvent.setup();
-    await screen.findByText('raven-api 0.1.0');
-    await user.click(screen.getByRole('button', { name: 'Clear local UI state' }));
-    expect(screen.getByRole('main')).toHaveTextContent('Cleared 1 stored item.');
+  it('offers to replay the intro', async () => {
+    mockApi(me);
+    renderApp('/profile');
+    await screen.findByRole('heading', { level: 1, name: 'Profile' });
     expect(screen.getByRole('link', { name: 'Replay intro' })).toHaveAttribute('href', '/');
-    expect(screen.getByText('All timestamps are shown in UTC.')).toBeInTheDocument();
-    expect(window.localStorage.getItem('unrelated')).toBe('keep');
-    await user.click(screen.getByRole('button', { name: 'Clear local UI state' }));
-    expect(screen.getByRole('main')).toHaveTextContent('There was no local interface state to clear.');
   });
 });
 

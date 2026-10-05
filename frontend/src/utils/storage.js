@@ -1,4 +1,4 @@
-// Local UI state lives under keys that start with "raven." and can be cleared from the Settings page.
+// Local UI state lives under keys that start with "raven." (currently unused by any page, kept for reuse).
 
 export const STORAGE_PREFIX = 'raven.';
 

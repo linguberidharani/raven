@@ -53,6 +53,7 @@ describe('Detection: groups', () => {
   it('explains why a group matched and what it means, as derived text, with the evidence', async () => {
     await open();
     const group = within((await screen.findByText('RAVEN-R001:1001:2026-09-13T08:39:49.545Z')).closest('article'));
+    await userEvent.setup().click(group.getByRole('button', { name: 'View details' }));
     expect(group.getByText('Derived / interpreted')).toBeInTheDocument();
     expect(group.getByText(/process ID 1001/)).toBeInTheDocument();
     expect(group.getByText('For process ID 1001, the recorded events satisfy rule RAVEN-R001.')).toBeInTheDocument();
@@ -69,11 +70,24 @@ describe('Detection: groups', () => {
     const refs = Array.from({ length: 15 }, (_, index) => `1:${index + 1}`);
     await open({ 'GET /api/investigations/1/detections': { body: { ...DETECTIONS, groups: [detectionGroup(1, RULES[2], refs)] } } });
     const group = within((await screen.findByText(detectionGroup(1, RULES[2], refs).group_id)).closest('article'));
+    const user = userEvent.setup();
+    await user.click(group.getByRole('button', { name: 'View details' }));
     expect(group.getAllByRole('button', { name: /^Open event/ })).toHaveLength(12);
     const more = group.getByRole('button', { name: 'Show all 15 evidence events' });
-    await userEvent.setup().click(more);
+    await user.click(more);
     expect(group.getAllByRole('button', { name: /^Open event/ })).toHaveLength(15);
     expect(group.getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('starts each group collapsed and shows its detail on request', async () => {
+    await open();
+    const group = within((await screen.findByText('RAVEN-R001:1001:2026-09-13T08:39:49.545Z')).closest('article'));
+    expect(group.queryByText('Why this activity is correlated')).not.toBeInTheDocument();
+    const toggle = group.getByRole('button', { name: 'View details' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.setup().click(toggle);
+    expect(group.getByText('Why this activity is correlated')).toBeInTheDocument();
+    expect(group.getByRole('button', { name: 'Hide details' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('filters by rule from the rule card and from the list', async () => {

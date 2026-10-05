@@ -114,6 +114,10 @@
   margin-top: 8px;
 }
 
+.tl-details-toggle {
+  margin-top: 8px;
+}
+
 .group-chip {
   display: inline-flex;
   align-items: center;

@@ -32,11 +32,22 @@ describe('Impact: observed impact', () => {
     const files = observed('files_affected');
     expect(files.getByText('558')).toBeInTheDocument();
     expect(files.getByText('1 computer, 3 users, 16 processes')).toBeInTheDocument();
+    expect(files.queryByText('Most affected (475 distinct)')).not.toBeInTheDocument();
+    await userEvent.setup().click(files.getByRole('button', { name: 'View details' }));
     expect(files.getByText('Most affected (475 distinct)')).toBeInTheDocument();
     expect(files.getByText('C:\\Users\\lab\\files_affected\\top.txt')).toBeInTheDocument();
     expect(files.getAllByRole('button', { name: /^Open event/ }).map((b) => b.textContent)).toEqual(['1:1', '1:2']);
     expect(observed('network_activity').getByText('14')).toBeInTheDocument();
     expect(observed('process_activity').getByText('25')).toBeInTheDocument();
+  });
+
+  it('starts each category collapsed and shows its detail on request', async () => {
+    await open();
+    const files = observed('files_affected');
+    const toggle = files.getByRole('button', { name: 'View details' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.setup().click(toggle);
+    expect(files.getByRole('button', { name: 'Hide details' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('says so when a category names no assets', async () => {
@@ -46,7 +57,10 @@ describe('Impact: observed impact', () => {
 
   it('opens the raw record behind an impact figure', async () => {
     await open();
-    await userEvent.setup().click(observed('network_activity').getAllByRole('button', { name: 'Open event 1:1' })[0]);
+    const category = observed('network_activity');
+    const user = userEvent.setup();
+    await user.click(category.getByRole('button', { name: 'View details' }));
+    await user.click(category.getAllByRole('button', { name: 'Open event 1:1' })[0]);
     expect(await screen.findByRole('dialog', { name: /Event 1:1/ })).toBeInTheDocument();
   });
 });

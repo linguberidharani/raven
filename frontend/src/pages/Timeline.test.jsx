@@ -28,12 +28,25 @@ describe('Timeline: the events', () => {
     expect(first.getByText('Observed evidence')).toBeInTheDocument();
     expect(first.getByText('Process created', { selector: '.tl-type' })).toBeInTheDocument();
     expect(first.getByText('#1')).toBeInTheDocument();
+    expect(first.queryByText('LAB-HOST')).not.toBeInTheDocument();
+    await userEvent.setup().click(first.getByRole('button', { name: 'Show details' }));
     expect(first.getByText('LAB-HOST')).toBeInTheDocument();
     expect(first.getByText('Sysmon event 1')).toBeInTheDocument();
     expect(first.getByRole('button', { name: 'Open event 1:1' })).toBeInTheDocument();
+    await userEvent.setup().click(within(cards[1]).getByRole('button', { name: 'Show details' }));
     expect(within(cards[1]).getByText('Sysmon event 11')).toBeInTheDocument();
+    await userEvent.setup().click(within(cards[2]).getByRole('button', { name: 'Show details' }));
     expect(within(cards[2]).getByText('Sysmon event 3')).toBeInTheDocument();
     expect(within(cards[2]).getByText('Network connection', { selector: '.tl-type' })).toBeInTheDocument();
+  });
+
+  it('keeps the technical details of an event collapsed until asked', async () => {
+    await open();
+    const first = within(items()[0]);
+    const toggle = first.getByRole('button', { name: 'Show details' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.setup().click(toggle);
+    expect(first.getByRole('button', { name: 'Hide details' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('shows the time with milliseconds and a heading for each minute', async () => {
@@ -59,7 +72,10 @@ describe('Timeline: the events', () => {
 
   it('opens the raw record of an event', async () => {
     await open();
-    await userEvent.setup().click(within(items()[0]).getByRole('button', { name: 'Open event 1:1' }));
+    const first = within(items()[0]);
+    const user = userEvent.setup();
+    await user.click(first.getByRole('button', { name: 'Show details' }));
+    await user.click(first.getByRole('button', { name: 'Open event 1:1' }));
     expect(await screen.findByRole('dialog', { name: /Event 1:1/ })).toBeInTheDocument();
   });
 });

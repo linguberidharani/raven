@@ -30,7 +30,6 @@ export function breadcrumbsFor(pathname, caseCode = null) {
   if (pathname === '/dashboard') return [{ label: 'Dashboard' }];
   if (pathname === '/investigations') return [{ label: 'Investigations' }];
   if (pathname === '/profile') return [{ label: 'Profile' }];
-  if (pathname === '/settings') return [{ label: 'Settings' }];
   const found = matchInvestigation(pathname);
   if (found) {
     const items = [{ label: 'Investigations', to: '/investigations' }];

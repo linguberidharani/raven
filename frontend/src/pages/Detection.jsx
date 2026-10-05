@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getDetections } from '../api/investigations';
 import { Badge, BasisBadge, SeverityBadge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { EventRefList } from '../components/EventPanel';
+import { ExpandToggle } from '../components/ExpandToggle';
 import { Icon } from '../components/Icons';
 import { SectionHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
@@ -73,6 +74,8 @@ function RuleCard({ rule, selected, onToggle }) {
 
 function GroupCard({ group }) {
   const span = Date.parse(group.window_end) - Date.parse(group.window_start);
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
   return (
     <article className="group-card" aria-labelledby={`group-${group.group_id}`}>
       <div className="group-head">
@@ -88,35 +91,40 @@ function GroupCard({ group }) {
       <p className="group-meta">
         {matchKeyLabel(group.match_key)} <span className="mono">{group.match_value}</span> · {formatTimestamp(group.window_start, { millis: true })} to {formatTimestamp(group.window_end, { millis: true })} ({formatDuration(span)}) · {formatNumber(group.event_count)} events · rule confidence {group.confidence}%
       </p>
-      <div className="explain">
-        <div className="explain-label">Why this activity is correlated</div>
-        <p>{group.why.text}</p>
-        <table className="mini-table">
-          <caption className="sr-only">Steps of the rule for this group</caption>
-          <thead>
-            <tr>
-              <th scope="col">Step</th>
-              <th scope="col" className="num">Required</th>
-              <th scope="col" className="num">Found</th>
-            </tr>
-          </thead>
-          <tbody>
-            {group.why.steps.map((step, index) => (
-              <tr key={`${step.event_type}-${index}`}>
-                <td>{eventTypeLabel(step.event_type)}</td>
-                <td className="num">{step.required}</td>
-                <td className="num">{step.found}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="explain">
-        <div className="explain-label">Interpretation</div>
-        <p>{group.interpretation.text}</p>
-      </div>
-      <div className="explain-label">Evidence events</div>
-      <EventRefList references={group.evidence.raw_event_refs} />
+      {open ? (
+        <div id={detailsId}>
+          <div className="explain">
+            <div className="explain-label">Why this activity is correlated</div>
+            <p>{group.why.text}</p>
+            <table className="mini-table">
+              <caption className="sr-only">Steps of the rule for this group</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Step</th>
+                  <th scope="col" className="num">Required</th>
+                  <th scope="col" className="num">Found</th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.why.steps.map((step, index) => (
+                  <tr key={`${step.event_type}-${index}`}>
+                    <td>{eventTypeLabel(step.event_type)}</td>
+                    <td className="num">{step.required}</td>
+                    <td className="num">{step.found}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="explain">
+            <div className="explain-label">Interpretation</div>
+            <p>{group.interpretation.text}</p>
+          </div>
+          <div className="explain-label">Evidence events</div>
+          <EventRefList references={group.evidence.raw_event_refs} />
+        </div>
+      ) : null}
+      <ExpandToggle open={open} onClick={() => setOpen((value) => !value)} moreLabel="View details" lessLabel="Hide details" controls={detailsId} />
     </article>
   );
 }

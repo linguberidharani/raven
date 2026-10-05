@@ -83,6 +83,30 @@ describe('Report: the document', () => {
     expect(finding.getByText('and 2 more groups')).toBeInTheDocument();
   });
 
+  it('collapses the extra findings of a long section behind View more findings', async () => {
+    const many = Array.from({ length: 5 }, (_, i) => ({ statement: `Finding ${i}.`, basis: 'observed', evidence: { event_ids: [], correlation_group_ids: [], timeline_event_ids: [], impact_analysis_ids: [], raw_event_refs: [] } }));
+    const doc = { ...REPORT_DOC, sections: [{ section_id: 'executive_summary', title: 'Executive summary', findings: many }] };
+    await open({ 'GET /api/investigations/1/report': { body: doc } });
+    const region = section('executive_summary');
+    expect(region.getByText('Finding 0.')).toBeInTheDocument();
+    expect(region.getByText('Finding 1.')).toBeInTheDocument();
+    // The rest are collapsed with a CSS class (report.css: .report-more { display: none }), not unmounted, so
+    // a printed or saved PDF still has them (checked below and in styles/report.css) -- jsdom does not apply
+    // external stylesheets, so this checks the class and the toggle state rather than visibility.
+    const more = region.getByText('Finding 4.').closest('.report-more');
+    expect(more).not.toHaveClass('open');
+    const toggle = region.getByRole('button', { name: 'View more findings (3)' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.setup().click(toggle);
+    expect(more).toHaveClass('open');
+    expect(region.getByRole('button', { name: 'View less' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('has no View more findings toggle when a section fits within the preview', async () => {
+    await open();
+    expect(section('executive_summary').queryByRole('button', { name: /View more findings/ })).not.toBeInTheDocument();
+  });
+
   it('prints the report', async () => {
     await open();
     const print = vi.spyOn(window, 'print').mockImplementation(() => {});

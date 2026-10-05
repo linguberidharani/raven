@@ -4,6 +4,7 @@ import { ApiError } from '../api/errors';
 import { getReport } from '../api/investigations';
 import { Badge } from '../components/Badge';
 import { EventRefList } from '../components/EventPanel';
+import { ExpandToggle } from '../components/ExpandToggle';
 import { Icon } from '../components/Icons';
 import { SectionHeader } from '../components/PageHeader';
 import { SessionPicker } from '../components/SessionPicker';
@@ -14,6 +15,7 @@ import { formatClock, formatNumber, formatTimestamp } from '../utils/format';
 import { investigationPath } from '../utils/navigation';
 
 const BASIS_LABEL = { observed: 'Observed evidence', derived: 'Derived / interpreted' };
+const PREVIEW_FINDINGS = 2;
 
 /** RAVEN-R003:6844:2026-09-13T08:39:49.545Z -> R003:6844 \u00b7 08:39:49 (the time tells apart groups of one process) */
 function groupLabel(groupId) {
@@ -52,13 +54,28 @@ function Finding({ finding }) {
 
 function Section({ section }) {
   const limitations = section.section_id === 'confidence_limitations';
+  const [open, setOpen] = useState(false);
+  const preview = section.findings.slice(0, PREVIEW_FINDINGS);
+  const rest = section.findings.slice(PREVIEW_FINDINGS);
   return (
     <section className={`report-section${limitations ? ' limitations' : ''}`} id={`section-${section.section_id}`} aria-labelledby={`heading-${section.section_id}`}>
       <h3 id={`heading-${section.section_id}`}>{section.title}</h3>
       {limitations ? <p className="faint">What the evidence cannot show. RAVEN reports behaviour, not intent.</p> : null}
-      {section.findings.map((finding, index) => (
+      {preview.map((finding, index) => (
         <Finding key={`${section.section_id}-${index}`} finding={finding} />
       ))}
+      {rest.length > 0 ? (
+        <>
+          {/* Kept in the DOM (not unmounted) so a printed or saved PDF always has the complete report,
+              whatever the on-screen toggle state is; see .report-more in report.css. */}
+          <div className={`report-more${open ? ' open' : ''}`}>
+            {rest.map((finding, index) => (
+              <Finding key={`${section.section_id}-${index + PREVIEW_FINDINGS}`} finding={finding} />
+            ))}
+          </div>
+          <ExpandToggle open={open} onClick={() => setOpen((value) => !value)} moreLabel="View more findings" hiddenCount={rest.length} className="no-print" />
+        </>
+      ) : null}
     </section>
   );
 }

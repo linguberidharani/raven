@@ -130,8 +130,16 @@ body {
 .dash-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: dense;
   align-items: start;
-  gap: 18px;
+  gap: 16px;
+}
+
+/* Every card keeps its own natural height (no stretching); dense packing avoids leaving an unused column
+   behind if a future card's span does not divide the row evenly, so the grid keeps flowing without gaps. */
+
+.dashboard {
+  gap: 16px;
 }
 
 .stat-grid-icons {

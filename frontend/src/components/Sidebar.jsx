@@ -13,7 +13,7 @@ function Item({ to, icon, end = false, children }) {
   );
 }
 
-/** Dashboard, Investigations, the current case with its workflow, Profile, Settings, Sign out. */
+/** Dashboard, Investigations, the current case with its workflow, Profile, Sign out. */
 export function Sidebar({ open, onClose, onSignOut, id }) {
   const { id: caseId, investigation } = useCase();
   return (
@@ -59,9 +59,6 @@ export function Sidebar({ open, onClose, onSignOut, id }) {
         <nav className="nav-section" aria-label="Account">
           <Item to="/profile" icon="user">
             Profile
-          </Item>
-          <Item to="/settings" icon="settings">
-            Settings
           </Item>
           <button type="button" className="nav-link" onClick={onSignOut}>
             <Icon name="logout" />

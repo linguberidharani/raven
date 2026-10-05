@@ -167,6 +167,8 @@
 
 .page-subtitle {
   color: var(--text-2);
+  font-size: 0.95rem;
+  margin-top: 2px;
 }
 
 .breadcrumbs ol {
@@ -193,7 +195,7 @@
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .two-col {

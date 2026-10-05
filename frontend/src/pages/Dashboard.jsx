@@ -4,10 +4,12 @@ import { useAuth } from '../auth/AuthContext';
 import { BasisBadge, SeverityBadge, StatusBadge } from '../components/Badge';
 import { Card, StatCard } from '../components/Card';
 import { Donut } from '../components/Donut';
+import { ExpandToggle } from '../components/ExpandToggle';
 import { Icon } from '../components/Icons';
 import { PageHeader } from '../components/PageHeader';
 import { EmptyState, ErrorBanner, Skeleton } from '../components/States';
 import { useApi } from '../hooks/useApi';
+import { useExpandable } from '../hooks/useExpandable';
 import { formatClock, formatDuration, formatNumber, formatTimestamp } from '../utils/format';
 import { plural, severityInfo, shortRuleId, statusInfo } from '../utils/mapping';
 import { investigationPath } from '../utils/navigation';
@@ -22,6 +24,7 @@ const SEVERITY_COLORS = {
 const SEVERITY_LABELS = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', INFO: 'Info', none: 'Not analysed' };
 const STATUS_COLORS = { open: 'var(--accent)', active: 'var(--success)', closed: 'var(--sev-info)' };
 const EVIDENCE_ORDER = ['uploaded', 'processing', 'ready', 'failed'];
+const PREVIEW_COUNT = 3;
 const ACTIVITY_ICONS = { investigation_created: 'cases', evidence_uploaded: 'upload', analysis_completed: 'check', analysis_failed: 'alert' };
 
 function LoadingGrid() {
@@ -132,6 +135,62 @@ function FindingBars({ counts }) {
   );
 }
 
+function AlertsCard({ alerts }) {
+  const { shown, open, hidden, toggle } = useExpandable(alerts, PREVIEW_COUNT);
+  return (
+    <Card title="Important alerts" actions={<BasisBadge basis="derived" />}>
+      {alerts.length === 0 ? (
+        <p className="muted">No high severity correlation group has been found.</p>
+      ) : (
+        <>
+          <ul className="alert-list">
+            {shown.map((alert) => (
+              <li key={alert.group_id}>
+                <SeverityBadge value={alert.severity} />
+                <Link to={investigationPath(alert.investigation_id, 'detection')}>{alert.rule_name}</Link>
+                <span className="faint">
+                  {alert.code} · {formatTimestamp(alert.window_start)} · {plural(alert.event_count, 'event')}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {hidden > 0 ? <ExpandToggle open={open} onClick={toggle} hiddenCount={hidden} /> : null}
+        </>
+      )}
+    </Card>
+  );
+}
+
+function ActivityCard({ items }) {
+  const { shown, open, hidden, toggle } = useExpandable(items, PREVIEW_COUNT);
+  return (
+    <Card title="Recent activity">
+      {items.length === 0 ? (
+        <p className="muted">Nothing has happened yet.</p>
+      ) : (
+        <>
+          <ul className="activity-list">
+            {shown.map((item, index) => (
+              <li key={`${item.time}-${index}`}>
+                <span className={`activity-icon kind-${item.kind}`} aria-hidden="true">
+                  <Icon name={ACTIVITY_ICONS[item.kind] ?? 'info'} size={16} />
+                </span>
+                <div>
+                  <Link to={investigationPath(item.investigation_id, 'evidence')}>{item.text}</Link>
+                  <div className="faint">
+                    {item.code} · {formatTimestamp(item.time)}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {hidden > 0 ? <ExpandToggle open={open} onClick={toggle} hiddenCount={hidden} /> : null}
+        </>
+      )}
+    </Card>
+  );
+}
+
 /** Every figure is counted by the API from real records; this page only shows them. */
 export default function Dashboard() {
   const { user } = useAuth();
@@ -217,23 +276,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="span-4">
-              <Card title="Important alerts" actions={<BasisBadge basis="derived" />}>
-                {data.alerts.length === 0 ? (
-                  <p className="muted">No high severity correlation group has been found.</p>
-                ) : (
-                  <ul className="alert-list">
-                    {data.alerts.map((alert) => (
-                      <li key={alert.group_id}>
-                        <SeverityBadge value={alert.severity} />
-                        <Link to={investigationPath(alert.investigation_id, 'detection')}>{alert.rule_name}</Link>
-                        <span className="faint">
-                          {alert.code} · {formatTimestamp(alert.window_start)} · {plural(alert.event_count, 'event')}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Card>
+              <AlertsCard alerts={data.alerts} />
             </div>
 
             <div className="span-4">
@@ -242,27 +285,7 @@ export default function Dashboard() {
               </Card>
             </div>
             <div className="span-4">
-              <Card title="Recent activity">
-                {data.recent_activity.length === 0 ? (
-                  <p className="muted">Nothing has happened yet.</p>
-                ) : (
-                  <ul className="activity-list">
-                    {data.recent_activity.map((item, index) => (
-                      <li key={`${item.time}-${index}`}>
-                        <span className={`activity-icon kind-${item.kind}`} aria-hidden="true">
-                          <Icon name={ACTIVITY_ICONS[item.kind] ?? 'info'} size={16} />
-                        </span>
-                        <div>
-                          <Link to={investigationPath(item.investigation_id, 'evidence')}>{item.text}</Link>
-                          <div className="faint">
-                            {item.code} · {formatTimestamp(item.time)}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Card>
+              <ActivityCard items={data.recent_activity} />
             </div>
             <div className="span-4">
               <Card title="Findings by severity" actions={<BasisBadge basis="derived" />}>

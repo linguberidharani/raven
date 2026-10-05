@@ -34,6 +34,23 @@ export function validateRegister({ name, email, organization, password, confirm 
   return errors;
 }
 
+export function validateForgotPassword({ email }) {
+  const errors = {};
+  if (!email || !email.trim()) errors.email = 'Enter your email address.';
+  else if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
+  return errors;
+}
+
+export function validateResetPassword({ password, confirm }) {
+  const errors = {};
+  if (!password) errors.password = 'Choose a new password.';
+  else if (password.length < PASSWORD_MIN) errors.password = `Use at least ${PASSWORD_MIN} characters.`;
+  else if (password.length > PASSWORD_MAX) errors.password = `Use at most ${PASSWORD_MAX} characters.`;
+  else if (!password.trim()) errors.password = 'The password cannot be only spaces.';
+  if (!errors.password && password !== confirm) errors.confirm = 'The two passwords are not the same.';
+  return errors;
+}
+
 function hasControlCharacter(text) {
   for (let index = 0; index < text.length; index += 1) {
     if (text.charCodeAt(index) < 32) return true;

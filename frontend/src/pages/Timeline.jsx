@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getRules } from '../api/rules';
 import { getTimeline } from '../api/investigations';
 import { BasisBadge } from '../components/Badge';
 import { EventRef } from '../components/EventPanel';
+import { ExpandToggle } from '../components/ExpandToggle';
 import { Icon } from '../components/Icons';
 import { SectionHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
@@ -34,6 +35,8 @@ function uniqueRules(groups) {
 
 function TimelineItem({ item }) {
   const rules = uniqueRules(item.groups);
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
   return (
     <li className={`tl-item type-${item.event_type}`}>
       <div className="tl-time mono">{formatClock(item.timestamp)}</div>
@@ -47,11 +50,6 @@ function TimelineItem({ item }) {
           <span className="faint mono">#{item.sequence_number}</span>
         </div>
         <p className="tl-text">{item.description}</p>
-        <div className="tl-meta">
-          <span>Host <span className="mono">{item.computer}</span></span>
-          <span>Sysmon event {item.sysmon_event_id}</span>
-          <EventRef reference={item.raw_event_ref} />
-        </div>
         {rules.length > 0 ? (
           <div className="tl-groups">
             <span className="faint">Correlated by</span>
@@ -64,6 +62,14 @@ function TimelineItem({ item }) {
             <BasisBadge basis="derived" />
           </div>
         ) : null}
+        {open ? (
+          <div className="tl-meta" id={detailsId}>
+            <span>Host <span className="mono">{item.computer}</span></span>
+            <span>Sysmon event {item.sysmon_event_id}</span>
+            <EventRef reference={item.raw_event_ref} />
+          </div>
+        ) : null}
+        <ExpandToggle open={open} onClick={() => setOpen((value) => !value)} moreLabel="Show details" lessLabel="Hide details" controls={detailsId} className="tl-details-toggle" />
       </article>
     </li>
   );

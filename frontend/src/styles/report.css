@@ -220,3 +220,19 @@
     text-decoration: none;
   }
 }
+
+/* The extra findings of a report section beyond the on-screen preview: hidden until "View more", but always
+   present in a printed or saved-as-PDF report regardless of the on-screen toggle. */
+.report-more {
+  display: none;
+}
+
+.report-more.open {
+  display: block;
+}
+
+@media print {
+  .report-more {
+    display: block !important;
+  }
+}

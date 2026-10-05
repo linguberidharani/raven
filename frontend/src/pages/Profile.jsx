@@ -76,7 +76,10 @@ export default function Profile() {
           <p className="muted">Loading the investigation.</p>
         )}
       </Card>
-      <div>
+      <div className="actions">
+        <Link className="btn btn-secondary" to="/">
+          Replay intro
+        </Link>
         <button type="button" className="btn btn-danger" onClick={signOut}>
           Sign out
         </button>

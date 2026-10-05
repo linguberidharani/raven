@@ -11,8 +11,9 @@ afterEach(() => vi.restoreAllMocks());
 async function openPanel(routes = {}) {
   const mocked = mockApi(caseRoutes(INVESTIGATION, routes));
   renderApp('/investigations/1/detection');
-  const chip = (await screen.findAllByRole('button', { name: 'Open event 1:1' }))[0];
   const user = userEvent.setup();
+  await user.click((await screen.findAllByRole('button', { name: 'View details' }))[0]);
+  const chip = (await screen.findAllByRole('button', { name: 'Open event 1:1' }))[0];
   await user.click(chip);
   return { ...mocked, chip, user };
 }
@@ -121,6 +122,10 @@ describe('the event details panel', () => {
   it('is available for the references of every group', async () => {
     mockApi(caseRoutes(INVESTIGATION));
     renderApp('/investigations/1/detection');
+    const user = userEvent.setup();
+    for (const button of await screen.findAllByRole('button', { name: 'View details' })) {
+      await user.click(button);
+    }
     const chips = await screen.findAllByRole('button', { name: /^Open event/ });
     expect(chips.length).toBe(DETECTIONS.groups.reduce((total, group) => total + group.evidence.raw_event_refs.length, 0));
   });

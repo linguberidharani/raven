@@ -47,7 +47,7 @@ describe('validateRegister', () => {
 describe('safeNextPath', () => {
   it('keeps paths inside the app', () => {
     expect(safeNextPath('/investigations/3/timeline')).toBe('/investigations/3/timeline');
-    expect(safeNextPath('/settings?tab=1')).toBe('/settings?tab=1');
+    expect(safeNextPath('/profile?tab=1')).toBe('/profile?tab=1');
   });
   it('refuses everything else', () => {
     for (const value of ['https://evil.example', '//evil.example', '/\\evil', 'javascript:alert(1)', '', null, undefined, 5, '/a\nb', '/login', '/register', '/']) {

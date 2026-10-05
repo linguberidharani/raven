@@ -1,9 +1,10 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getImpact } from '../api/investigations';
 import { BasisBadge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { EventRefList } from '../components/EventPanel';
+import { ExpandToggle } from '../components/ExpandToggle';
 import { Icon } from '../components/Icons';
 import { SectionHeader } from '../components/PageHeader';
 import { EmptyState, ErrorBanner, Skeleton } from '../components/States';
@@ -17,6 +18,10 @@ const ActivityChart = lazy(() => import('../components/ActivityChart'));
 
 function ObservedCard({ category }) {
   const { observed, evidence } = category;
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
+  const hasAssets = observed.top_assets.length > 0;
+  const hasEvidence = evidence.raw_event_refs.length > 0;
   return (
     <article className="impact-card" aria-labelledby={`observed-${category.category}`}>
       <h4 id={`observed-${category.category}`}>{impactCategoryLabel(category.category)}</h4>
@@ -24,26 +29,32 @@ function ObservedCard({ category }) {
         {formatNumber(observed.event_count)} <span className="muted">observed events</span>
       </div>
       <p className="faint">{impactDetails(observed.details)}</p>
-      {observed.top_assets.length > 0 ? (
-        <>
-          <div className="explain-label">Most affected ({formatNumber(observed.affected_assets.length)} distinct)</div>
-          <ul className="asset-list">
-            {observed.top_assets.map((asset) => (
-              <li key={asset.asset}>
-                <span className="mono asset-name">{asset.asset}</span>
-                <span className="mono">{formatNumber(asset.events)}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p className="faint">No assets were named by these events.</p>
-      )}
-      {evidence.raw_event_refs.length > 0 ? (
-        <>
-          <div className="explain-label">Evidence events</div>
-          <EventRefList references={evidence.raw_event_refs} limit={6} />
-        </>
+      {!hasAssets ? <p className="faint">No assets were named by these events.</p> : null}
+      {open ? (
+        <div id={detailsId}>
+          {hasAssets ? (
+            <>
+              <div className="explain-label">Most affected ({formatNumber(observed.affected_assets.length)} distinct)</div>
+              <ul className="asset-list">
+                {observed.top_assets.map((asset) => (
+                  <li key={asset.asset}>
+                    <span className="mono asset-name">{asset.asset}</span>
+                    <span className="mono">{formatNumber(asset.events)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {hasEvidence ? (
+            <>
+              <div className="explain-label">Evidence events</div>
+              <EventRefList references={evidence.raw_event_refs} limit={6} />
+            </>
+          ) : null}
+        </div>
+      ) : null}
+      {hasAssets || hasEvidence ? (
+        <ExpandToggle open={open} onClick={() => setOpen((value) => !value)} moreLabel="View details" lessLabel="Hide details" controls={detailsId} />
       ) : null}
     </article>
   );

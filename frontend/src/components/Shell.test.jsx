@@ -49,7 +49,6 @@ describe('the signed-in frame', () => {
     expect(within(main).getByRole('link', { name: 'Investigations' })).toHaveAttribute('href', '/investigations');
     const account = screen.getByRole('navigation', { name: 'Account' });
     expect(within(account).getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile');
-    expect(within(account).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings');
     expect(within(account).getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
   });
 
@@ -121,7 +120,7 @@ describe('the signed-in frame', () => {
     renderApp('/investigations/7/evidence');
     await screen.findByRole('heading', { level: 1, name: 'Boot activity' });
     const user = userEvent.setup();
-    const targets = ['Detection & Correlation', 'Attack Reconstruction', 'Attack Timeline', 'Impact Analysis', 'RARF', 'Investigation Report', 'Evidence & Log Upload', 'Investigations', 'Settings', 'Profile', 'Dashboard'];
+    const targets = ['Detection & Correlation', 'Attack Reconstruction', 'Attack Timeline', 'Impact Analysis', 'RARF', 'Investigation Report', 'Evidence & Log Upload', 'Investigations', 'Profile', 'Dashboard'];
     for (const name of targets) {
       await user.click(within(screen.getByRole('complementary', { name: 'Sidebar' })).getByRole('link', { name }));
       await waitFor(() => expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1));
@@ -132,8 +131,8 @@ describe('the signed-in frame', () => {
   it('moves the focus to the page after a navigation', async () => {
     renderApp('/dashboard');
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
-    await userEvent.setup().click(screen.getByRole('link', { name: 'Settings' }));
-    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Profile' }));
+    await screen.findByRole('heading', { level: 1, name: 'Profile' });
     expect(screen.getByRole('main')).toHaveFocus();
   });
 
@@ -164,7 +163,7 @@ describe('the signed-in frame', () => {
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
-    await user.click(within(screen.getByRole('complementary', { name: 'Sidebar' })).getByRole('link', { name: 'Settings' }));
+    await user.click(within(screen.getByRole('complementary', { name: 'Sidebar' })).getByRole('link', { name: 'Profile' }));
     expect(screen.getByRole('complementary', { name: 'Sidebar' })).not.toHaveClass('open');
   });
 

@@ -34,7 +34,6 @@ describe('breadcrumbsFor', () => {
     expect(breadcrumbsFor('/dashboard')).toEqual([{ label: 'Dashboard' }]);
     expect(breadcrumbsFor('/investigations')).toEqual([{ label: 'Investigations' }]);
     expect(breadcrumbsFor('/profile')).toEqual([{ label: 'Profile' }]);
-    expect(breadcrumbsFor('/settings')).toEqual([{ label: 'Settings' }]);
   });
   it('links the parents of an investigation page', () => {
     expect(breadcrumbsFor('/investigations/4/timeline')).toEqual([
