@@ -10,6 +10,7 @@ their evidence and analysis runs. The analysis data of an investigation lives in
     evidence_sources   uploaded or collected evidence files of a case
     analysis_runs      runs of the processing pipeline with per-stage status
     collector_cursors  read positions in the VM collector files
+    password_reset_tokens  single-use, time-limited tokens emailed to reset a forgotten password
 
 Only users and sessions are used from stage S11; the other tables are created for the stages that follow.
 """
@@ -43,6 +44,19 @@ class UserSession(RegistryBase):
     token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     expires_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class PasswordResetToken(RegistryBase):
+    """A password reset link. Only the SHA-256 hash of the token is stored, the same as a session token."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    expires_at: Mapped[str] = mapped_column(String, nullable=False)
+    used_at: Mapped[str | None] = mapped_column(String)
 
 
 class Investigation(RegistryBase):
@@ -113,4 +127,5 @@ REGISTRY_TABLES: tuple[str, ...] = (
     "evidence_sources",
     "analysis_runs",
     "collector_cursors",
+    "password_reset_tokens",
 )

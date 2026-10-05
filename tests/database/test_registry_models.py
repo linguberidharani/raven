@@ -22,9 +22,17 @@ def add_user(factory, email="a@example.com"):
         ).inserted_primary_key[0]
 
 
-def test_the_six_tables_of_the_spec_exist(factory):
+def test_the_seven_tables_of_the_spec_exist(factory):
     assert set(inspect(factory.kw["bind"]).get_table_names()) == set(REGISTRY_TABLES)
-    assert REGISTRY_TABLES == ("users", "sessions", "investigations", "evidence_sources", "analysis_runs", "collector_cursors")
+    assert REGISTRY_TABLES == (
+        "users",
+        "sessions",
+        "investigations",
+        "evidence_sources",
+        "analysis_runs",
+        "collector_cursors",
+        "password_reset_tokens",
+    )
 
 
 def test_the_columns_follow_the_spec(factory):
@@ -35,6 +43,7 @@ def test_the_columns_follow_the_spec(factory):
         "evidence_sources": ["id", "investigation_id", "filename", "sha256", "size_bytes", "source_type", "status", "events_total", "error", "created_at", "ingested_at"],
         "analysis_runs": ["id", "investigation_id", "status", "stage", "stages_json", "error", "started_at", "finished_at"],
         "collector_cursors": ["id", "investigation_id", "source_name", "last_offset", "last_record_id", "updated_at"],
+        "password_reset_tokens": ["id", "user_id", "token_hash", "created_at", "expires_at", "used_at"],
     }
     for table, names in expected.items():
         assert [c["name"] for c in inspect(factory.kw["bind"]).get_columns(table)] == names

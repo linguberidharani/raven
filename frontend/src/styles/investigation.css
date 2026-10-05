@@ -54,7 +54,8 @@
 }
 
 .section-title {
-  font-size: 1.35rem;
+  font-size: 1.4rem;
+  font-weight: 700;
 }
 
 .stack {
@@ -311,7 +312,7 @@
 }
 
 .table td.mono {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .pagination {
