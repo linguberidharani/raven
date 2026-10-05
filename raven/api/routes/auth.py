@@ -5,11 +5,20 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
-from raven.api.dependencies import SESSION_COOKIE, current_user, get_auth, get_registry, get_settings_dep, session_token
-from raven.api.schemas.auth import LoginRequest, RegisterRequest, UserOut
+from raven.api.dependencies import (
+    SESSION_COOKIE,
+    current_user,
+    get_auth,
+    get_password_reset,
+    get_registry,
+    get_settings_dep,
+    session_token,
+)
+from raven.api.schemas.auth import ForgotPasswordRequest, LoginRequest, MessageOut, RegisterRequest, ResetPasswordRequest, UserOut
 from raven.config import Settings
 from raven.database.registry_models import User
 from raven.services.auth import AuthService
+from raven.services.password_reset import PasswordResetService
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -70,6 +79,33 @@ def logout(
     response = Response(status_code=204, headers=_NO_STORE)
     response.delete_cookie(key=SESSION_COOKIE, path="/", httponly=True, samesite="lax", secure=settings.cookie_secure)
     return response
+
+
+@router.post("/forgot-password", status_code=202, response_model=MessageOut)
+def forgot_password(
+    body: ForgotPasswordRequest,
+    response: Response,
+    registry: Session = Depends(get_registry),
+    password_reset: PasswordResetService = Depends(get_password_reset),
+) -> MessageOut:
+    """Request a password reset email. The answer is the same whether or not the address has an account,
+    and an email is sent only when it does, so this cannot be used to test which addresses are registered."""
+    response.headers.update(_NO_STORE)
+    password_reset.request_reset(registry, body.email)
+    return MessageOut(detail="If an account exists for that address, a password reset email has been sent.")
+
+
+@router.post("/reset-password", response_model=MessageOut)
+def reset_password(
+    body: ResetPasswordRequest,
+    response: Response,
+    registry: Session = Depends(get_registry),
+    password_reset: PasswordResetService = Depends(get_password_reset),
+) -> MessageOut:
+    """Set a new password from the token in a reset email. Every other session of the account is signed out."""
+    response.headers.update(_NO_STORE)
+    password_reset.reset_password(registry, body.token, body.password.get_secret_value())
+    return MessageOut(detail="Your password has been updated. Sign in with your new password.")
 
 
 @router.get("/me", response_model=UserOut)

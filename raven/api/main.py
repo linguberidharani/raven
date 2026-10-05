@@ -36,6 +36,8 @@ from raven.logging_config import configure_logging
 from raven.services.analysis_runs import AnalysisRunManager
 from raven.services.auth import AuthService
 from raven.services.inbox import InboxWatcher
+from raven.services.mailer import Mailer
+from raven.services.password_reset import PasswordResetService
 
 logger = logging.getLogger("raven.api")
 
@@ -43,11 +45,17 @@ _REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 _BODY_ALLOWANCE = 1024 * 1024  # room for the multipart framing around an upload
 
 
-def create_app(settings: Settings | None = None, password_hasher: PasswordHasher | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    password_hasher: PasswordHasher | None = None,
+    mailer: Mailer | None = None,
+) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
     registry_factory = open_registry_database(settings.registry_path)
 
+    hasher = password_hasher or PasswordHasher()
+    mailer = mailer or Mailer(settings)
     runs = AnalysisRunManager(registry_factory, settings)
     watcher = InboxWatcher(registry_factory, settings, runs)
 
@@ -71,7 +79,14 @@ def create_app(settings: Settings | None = None, password_hasher: PasswordHasher
     )
     app.state.settings = settings
     app.state.registry_factory = registry_factory
-    app.state.auth = AuthService(password_hasher, settings.session_hours)
+    app.state.auth = AuthService(hasher, settings.session_hours)
+    app.state.mailer = mailer
+    app.state.password_reset = PasswordResetService(
+        mailer,
+        hasher,
+        hours=settings.password_reset_hours,
+        base_url=settings.frontend_base_url,
+    )
     app.state.runs = runs
     app.state.inbox = watcher
 

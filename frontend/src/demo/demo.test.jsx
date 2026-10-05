@@ -26,12 +26,6 @@ describe('demo mode', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('marks the connection in the settings', async () => {
-    vi.stubEnv('VITE_DATA_SOURCE', 'demo');
-    renderApp('/settings');
-    expect(await screen.findByText('Demo data (not real telemetry)')).toBeInTheDocument();
-  });
-
   it('has no demo data for pages that were not prepared', async () => {
     await expect(demoRequest('GET', '/api/investigations/1/rarf')).rejects.toMatchObject({ code: 'demo_not_available', status: 404 });
   });

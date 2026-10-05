@@ -66,6 +66,9 @@ export default function Login() {
       <form className="auth-form" onSubmit={submit} noValidate ref={form}>
         <TextField label="Email" type="email" value={values.email} onChange={set('email')} error={errors.email} autoComplete="email" inputMode="email" />
         <PasswordField label="Password" value={values.password} onChange={set('password')} error={errors.password} autoComplete="current-password" />
+        <p className="field-note">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
         <button type="submit" className="btn" disabled={busy}>
           {busy ? 'Signing in\u2026' : 'Sign in'}
         </button>

@@ -4,6 +4,7 @@ import AppShell from './components/AppShell';
 import { DemoBanner } from './components/DemoBanner';
 import { PublicOnly, RequireAuth } from './components/RouteGuards';
 import Dashboard from './pages/Dashboard';
+import ForgotPassword from './pages/ForgotPassword';
 import InvestigationLayout from './pages/InvestigationLayout';
 import InvestigationStep from './pages/InvestigationStep';
 import Investigations from './pages/Investigations';
@@ -12,7 +13,7 @@ import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import Profile from './pages/Profile';
 import Register from './pages/Register';
-import Settings from './pages/Settings';
+import ResetPassword from './pages/ResetPassword';
 
 export default function App() {
   return (
@@ -37,6 +38,22 @@ export default function App() {
           }
         />
         <Route
+          path="/forgot-password"
+          element={
+            <PublicOnly>
+              <ForgotPassword />
+            </PublicOnly>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicOnly>
+              <ResetPassword />
+            </PublicOnly>
+          }
+        />
+        <Route
           element={
             <RequireAuth>
               <AppShell />
@@ -50,7 +67,6 @@ export default function App() {
             <Route path=":step" element={<InvestigationStep />} />
           </Route>
           <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

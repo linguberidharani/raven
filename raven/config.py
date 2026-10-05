@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     inbox_dir: Path = Path("data/inbox")
     inbox_poll_seconds: int = Field(default=5, ge=0, le=3600)
 
+    # Password reset email (spec section 8.2). Leave smtp_host empty to disable sending: a reset request is
+    # still accepted (so a missing account is never revealed by the API), but no email goes out.
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    smtp_from_address: str | None = None
+    smtp_from_name: str = "RAVEN"
+    frontend_base_url: str = "http://localhost:5173"
+    password_reset_hours: int = Field(default=1, ge=1, le=24)
+
     @field_validator("log_level", mode="before")
     @classmethod
     def _upper_case_log_level(cls, value: object) -> object:
@@ -74,6 +86,10 @@ class Settings(BaseSettings):
     @property
     def docs_enabled(self) -> bool:
         return self.env == "development"
+
+    @property
+    def mail_configured(self) -> bool:
+        return bool(self.smtp_host and self.smtp_from_address)
 
 
 @lru_cache

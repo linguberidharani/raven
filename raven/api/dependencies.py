@@ -13,6 +13,7 @@ from raven.database.registry_models import User
 from raven.services.analysis_runs import AnalysisRunManager
 from raven.services.auth import AuthService
 from raven.services.inbox import InboxWatcher
+from raven.services.password_reset import PasswordResetService
 
 SESSION_COOKIE = "raven_session"
 
@@ -31,6 +32,10 @@ def get_runs(request: Request) -> AnalysisRunManager:
 
 def get_inbox(request: Request) -> InboxWatcher:
     return request.app.state.inbox
+
+
+def get_password_reset(request: Request) -> PasswordResetService:
+    return request.app.state.password_reset
 
 
 def get_registry(request: Request) -> Iterator[Session]:

@@ -44,6 +44,20 @@ describe('accessibility (axe) of the signed-out pages', () => {
     await expectNoViolations();
   });
 
+  it('forgot password', { timeout: TIMEOUT }, async () => {
+    mockApi({ 'GET /api/auth/me': notAuthenticated });
+    renderApp('/forgot-password');
+    await screen.findByRole('heading', { name: 'Reset your password' });
+    await expectNoViolations();
+  });
+
+  it('reset password', { timeout: TIMEOUT }, async () => {
+    mockApi({ 'GET /api/auth/me': notAuthenticated });
+    renderApp('/reset-password?token=abc123');
+    await screen.findByRole('heading', { name: 'Choose a new password' });
+    await expectNoViolations();
+  });
+
   it('intro', { timeout: TIMEOUT }, async () => {
     mockApi({ 'GET /api/auth/me': notAuthenticated });
     renderApp('/');
@@ -56,7 +70,6 @@ describe('accessibility (axe) of the signed-in pages', () => {
   it('dashboard', { timeout: TIMEOUT }, () => check('/dashboard', () => screen.findByText('Latest attack session')));
   it('investigations', { timeout: TIMEOUT }, () => check('/investigations', () => screen.findByRole('table', { name: 'Investigations' })));
   it('profile', { timeout: TIMEOUT }, () => check('/profile', () => screen.findByRole('heading', { level: 1, name: 'Profile' })));
-  it('settings', { timeout: TIMEOUT }, () => check('/settings', () => screen.findByText('raven-api 0.1.0')));
   it('page not found', { timeout: TIMEOUT }, () => check('/nowhere', () => screen.findByRole('heading', { level: 1, name: 'Page not found' })));
 });
 
@@ -74,7 +87,9 @@ describe('accessibility (axe) of overlays and open states', () => {
   it('the event details panel', { timeout: TIMEOUT }, async () => {
     mockApi(caseRoutes(INVESTIGATION));
     renderApp('/investigations/1/detection');
-    await userEvent.setup().click((await screen.findAllByRole('button', { name: 'Open event 1:1' }))[0]);
+    const user = userEvent.setup();
+    await user.click((await screen.findAllByRole('button', { name: 'View details' }))[0]);
+    await user.click((await screen.findAllByRole('button', { name: 'Open event 1:1' }))[0]);
     const dialog = await screen.findByRole('dialog');
     await screen.findByText('Normalized record');
     await expectNoViolations(dialog);

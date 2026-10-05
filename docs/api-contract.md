@@ -11,8 +11,9 @@ Written from the real code. Contract tests in `tests\api` enforce the shapes bel
   (for example `2026-09-13T08:39:49.545Z`).
 - Every response has an `X-Request-ID` header. A client may send its own `X-Request-ID` (1 to 64 characters from
   `A-Z a-z 0-9 . _ -`); otherwise the server makes one. The same ID is in the body of error responses.
-- Every route except `GET /api/health`, `GET /health`, `POST /api/auth/register` and `POST /api/auth/login`
-  requires a signed-in user (session cookie). Without one the answer is `401` with the code `not_authenticated`.
+- Every route except `GET /api/health`, `GET /health`, `POST /api/auth/register`, `POST /api/auth/login`,
+  `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` requires a signed-in user (session
+  cookie). Without one the answer is `401` with the code `not_authenticated`.
 - The interactive documentation (`/docs`, `/openapi.json`) exists only when `RAVEN_ENV=development`.
 
 ## Errors
@@ -98,6 +99,21 @@ Response `201`: the user, see below. Errors: `409 email_already_registered`, `42
 
 No sign-in. Request: `{ "email": "...", "password": "..." }` (unknown fields are rejected).
 Response `200`: the user, and the `raven_session` cookie. Errors: `401 invalid_credentials`, `422 validation_error`.
+
+### POST /api/auth/forgot-password
+
+No sign-in. Request: `{ "email": "..." }`. Response `202`: `{ "detail": "..." }`, always the same text whether
+or not the address has an account, so this cannot be used to test which addresses are registered. A reset
+email is sent only when the address does have one; when `RAVEN_SMTP_HOST` is not configured, the request is
+still accepted and no email is sent. Error: `422 validation_error` for a malformed address.
+
+### POST /api/auth/reset-password
+
+No sign-in. Request: `{ "token": "...", "password": "..." }` (the token is the one from the reset email link,
+`?token=...`). Response `200`: `{ "detail": "..." }`. The token can be used once and expires after
+`RAVEN_PASSWORD_RESET_HOURS` (default 1 hour); on success every existing session of the account is deleted,
+so the analyst must sign in again everywhere. Errors: `400 invalid_reset_token` (unknown, expired or already
+used), `422 validation_error` (the new password does not meet the rules).
 
 ### POST /api/auth/logout
 

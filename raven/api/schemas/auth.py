@@ -44,6 +44,42 @@ class LoginRequest(BaseModel):
     password: SecretStr
 
 
+class ForgotPasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, value: str) -> str:
+        return validate_email(value)
+
+
+class ResetPasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str
+    password: SecretStr
+
+    @field_validator("token")
+    @classmethod
+    def _token(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("token must not be empty")
+        return cleaned
+
+    @field_validator("password")
+    @classmethod
+    def _password(cls, value: SecretStr) -> SecretStr:
+        validate_password(value.get_secret_value())
+        return value
+
+
+class MessageOut(BaseModel):
+    detail: str
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -163,3 +163,136 @@ def test_the_account_is_stored_in_the_registry(client, app):
     with app.state.registry_factory() as session:
         (user,) = session.scalars(select(User)).all()
     assert user.email == "ada@example.com" and user.password_hash.startswith("$argon2id$")
+
+
+# ---------------------------------------------------------------------------- forgot / reset password
+
+
+class _FakeMailer:
+    """Captures the email instead of sending it, so a test can read the reset link out of it."""
+
+    def __init__(self):
+        self.sent = []
+
+    @property
+    def configured(self):
+        return True
+
+    def send(self, *, to, subject, text_body, html_body=None):
+        self.sent.append({"to": to, "subject": subject, "text_body": text_body})
+
+    def token_of(self):
+        body = self.sent[-1]["text_body"]
+        line = next(line for line in body.splitlines() if line.startswith("http"))
+        return line.split("token=", 1)[1]
+
+
+def _app_with_mailer(tmp_path):
+    from raven.api.main import create_app
+
+    mailer = _FakeMailer()
+    application = create_app(make_settings(tmp_path), PasswordHasher(time_cost=1, memory_cost=8, parallelism=1), mailer)
+    return application, mailer
+
+
+def test_forgot_password_answers_202_the_same_way_for_a_real_and_an_unknown_address(tmp_path):
+    application, mailer = _app_with_mailer(tmp_path)
+    try:
+        with TestClient(application) as client:
+            client.post("/api/auth/register", json=register_body())
+            known = client.post("/api/auth/forgot-password", json={"email": "ada@example.com"})
+            unknown = client.post("/api/auth/forgot-password", json={"email": "nobody@example.com"})
+        assert known.status_code == unknown.status_code == 202
+        assert known.json() == unknown.json()
+        assert known.headers["Cache-Control"] == "no-store"
+        assert len(mailer.sent) == 1  # only the real address is actually emailed
+        assert mailer.sent[0]["to"] == "ada@example.com"
+    finally:
+        application.state.registry_factory.kw["bind"].dispose()
+
+
+def test_forgot_password_rejects_a_malformed_address(client):
+    response = client.post("/api/auth/forgot-password", json={"email": "not-an-email"})
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+
+def test_reset_password_end_to_end(tmp_path):
+    application, mailer = _app_with_mailer(tmp_path)
+    try:
+        with TestClient(application) as client:
+            client.post("/api/auth/register", json=register_body())
+            client.post("/api/auth/forgot-password", json={"email": "ada@example.com"})
+            token = mailer.token_of()
+
+            reset = client.post("/api/auth/reset-password", json={"token": token, "password": "a brand new password"})
+            assert reset.status_code == 200
+            assert reset.json() == {"detail": "Your password has been updated. Sign in with your new password."}
+            assert reset.headers["Cache-Control"] == "no-store"
+
+            old = client.post("/api/auth/login", json={"email": "ada@example.com", "password": PASSWORD})
+            assert old.status_code == 401
+            new = client.post("/api/auth/login", json={"email": "ada@example.com", "password": "a brand new password"})
+            assert new.status_code == 200
+    finally:
+        application.state.registry_factory.kw["bind"].dispose()
+
+
+def test_reset_password_signs_out_every_existing_session(tmp_path):
+    application, mailer = _app_with_mailer(tmp_path)
+    try:
+        with TestClient(application) as first, TestClient(application) as second:
+            first.post("/api/auth/register", json=register_body())
+            first.post("/api/auth/login", json={"email": "ada@example.com", "password": PASSWORD})
+            second.post("/api/auth/login", json={"email": "ada@example.com", "password": PASSWORD})
+            assert first.get("/api/auth/me").status_code == 200
+            assert second.get("/api/auth/me").status_code == 200
+
+            first.post("/api/auth/forgot-password", json={"email": "ada@example.com"})
+            client_only = TestClient(application)
+            client_only.post("/api/auth/reset-password", json={"token": mailer.token_of(), "password": "a brand new password"})
+
+            assert first.get("/api/auth/me").status_code == 401
+            assert second.get("/api/auth/me").status_code == 401
+    finally:
+        application.state.registry_factory.kw["bind"].dispose()
+
+
+def test_reset_password_rejects_an_unknown_or_reused_token(tmp_path):
+    application, mailer = _app_with_mailer(tmp_path)
+    try:
+        with TestClient(application) as client:
+            unknown = client.post("/api/auth/reset-password", json={"token": "not-a-real-token", "password": "a brand new password"})
+            assert unknown.status_code == 400
+            assert unknown.json()["code"] == "invalid_reset_token"
+
+            client.post("/api/auth/register", json=register_body())
+            client.post("/api/auth/forgot-password", json={"email": "ada@example.com"})
+            token = mailer.token_of()
+            first_use = client.post("/api/auth/reset-password", json={"token": token, "password": "a brand new password"})
+            assert first_use.status_code == 200
+            second_use = client.post("/api/auth/reset-password", json={"token": token, "password": "yet another password"})
+            assert second_use.status_code == 400
+            assert second_use.json()["code"] == "invalid_reset_token"
+    finally:
+        application.state.registry_factory.kw["bind"].dispose()
+
+
+def test_reset_password_rejects_a_password_that_breaks_the_rules(tmp_path):
+    application, mailer = _app_with_mailer(tmp_path)
+    try:
+        with TestClient(application) as client:
+            client.post("/api/auth/register", json=register_body())
+            client.post("/api/auth/forgot-password", json={"email": "ada@example.com"})
+            response = client.post("/api/auth/reset-password", json={"token": mailer.token_of(), "password": "short"})
+        assert response.status_code == 422
+        assert response.json()["code"] == "validation_error"
+    finally:
+        application.state.registry_factory.kw["bind"].dispose()
+
+
+def test_forgot_password_does_not_leak_whether_email_sending_is_configured(client):
+    """Even with no SMTP settings at all (the default test app), the request still answers 202."""
+    client.post("/api/auth/register", json=register_body())
+    response = client.post("/api/auth/forgot-password", json={"email": "ada@example.com"})
+    assert response.status_code == 202

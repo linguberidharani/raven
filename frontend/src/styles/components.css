@@ -234,6 +234,12 @@
   font-size: 0.86rem;
 }
 
+.field-note {
+  margin: -8px 0 0;
+  text-align: right;
+  font-size: 0.86rem;
+}
+
 /* Banners and states */
 .banner {
   display: flex;
@@ -407,5 +413,41 @@ body.has-demo-banner {
   }
   .kv dd {
     margin-bottom: 10px;
+  }
+}
+
+/* Progressive disclosure: the one "View more / Show details" toggle used across Dashboard, Detection,
+   Timeline, Impact and Report, so collapsing and expanding always looks and behaves the same. */
+.expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 4px;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.expand-toggle:hover {
+  text-decoration: underline;
+}
+
+.expand-toggle .icon {
+  transition: transform 140ms ease;
+  transform: rotate(90deg);
+}
+
+.expand-toggle[aria-expanded='true'] .icon {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expand-toggle .icon {
+    transition: none;
   }
 }
