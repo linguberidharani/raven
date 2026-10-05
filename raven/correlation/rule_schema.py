@@ -15,6 +15,23 @@ A rule is one YAML file:
     severity: "HIGH"          # HIGH | MEDIUM | LOW | INFO
     confidence: 85            # 0 to 100
 
+A step may optionally narrow its event_type match to events whose value of one field contains a
+piece of text (case-insensitive), instead of counting every event of that type:
+
+    steps:
+      - event_type: "file_create"
+        min_count: 1
+        field_match:
+          field: "file_path"
+          contains: "README"
+
+field_match is optional; a step without it behaves exactly as before. When present it must have
+exactly the two keys field and contains. field is "file_path" or "command_line" -- the only two
+normalized-event fields rules can look inside for now, not a general query language. Each is only
+meaningful on the event type that carries it, so it is only allowed on a step of the matching
+event_type: file_path on file_create, command_line on process_creation. contains is matched as a
+plain substring, case-insensitive; it is never a regular expression.
+
 Test-only rules may use the severity TEST. They live in the tests, never in the shipped rules folder,
 so the loader accepts TEST only when it is asked to (allow_test=True).
 """
@@ -33,8 +50,16 @@ ALLOWED_MATCH_KEYS = ("process_id", "process_guid")
 ALLOWED_SEVERITIES = ("HIGH", "MEDIUM", "LOW", "INFO")
 TEST_SEVERITY = "TEST"
 
+# field_match.field -> the one event_type it is allowed on (the only event_type that carries it).
+ALLOWED_FIELD_MATCH_FIELDS: dict[str, str] = {
+    "file_path": "file_create",
+    "command_line": "process_creation",
+}
+
 _RULE_FIELDS = ("rule_id", "rule_name", "description", "steps", "match_key", "time_window_seconds", "severity", "confidence")
 _STEP_FIELDS = ("event_type", "min_count")
+_STEP_FIELDS_WITH_MATCH = ("event_type", "min_count", "field_match")
+_FIELD_MATCH_FIELDS = ("field", "contains")
 
 SHIPPED_RULES_DIR = Path(__file__).resolve().parent / "rules"
 
@@ -44,9 +69,16 @@ class RuleError(ValueError):
 
 
 @dataclass(frozen=True)
+class FieldMatch:
+    field: str
+    contains: str
+
+
+@dataclass(frozen=True)
 class Step:
     event_type: str
     min_count: int
+    field_match: FieldMatch | None = None
 
 
 @dataclass(frozen=True)
@@ -70,7 +102,7 @@ class Rule:
             "rule_id": self.rule_id,
             "rule_name": self.rule_name,
             "description": self.description,
-            "steps": [{"event_type": s.event_type, "min_count": s.min_count} for s in self.steps],
+            "steps": [_step_to_definition(s) for s in self.steps],
             "match_key": self.match_key,
             "time_window_seconds": self.time_window_seconds,
             "severity": self.severity,
@@ -78,8 +110,31 @@ class Rule:
         }
 
 
+def _step_to_definition(step: Step) -> dict[str, Any]:
+    definition: dict[str, Any] = {"event_type": step.event_type, "min_count": step.min_count}
+    if step.field_match is not None:
+        definition["field_match"] = {"field": step.field_match.field, "contains": step.field_match.contains}
+    return definition
+
+
 def _is_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _field_match_from_dict(data: Any, step_number: int, event_type: str) -> FieldMatch:
+    if not isinstance(data, dict) or set(data) != set(_FIELD_MATCH_FIELDS):
+        raise RuleError(f"step {step_number}: field_match must have exactly the fields field and contains")
+    if data["field"] not in ALLOWED_FIELD_MATCH_FIELDS:
+        raise RuleError(f"step {step_number}: field_match.field must be one of " + ", ".join(ALLOWED_FIELD_MATCH_FIELDS))
+    required_event_type = ALLOWED_FIELD_MATCH_FIELDS[data["field"]]
+    if event_type != required_event_type:
+        raise RuleError(
+            f"step {step_number}: field_match.field {data['field']!r} is only valid on a step of "
+            f"event_type {required_event_type!r}, not {event_type!r}"
+        )
+    if not isinstance(data["contains"], str) or not data["contains"].strip():
+        raise RuleError(f"step {step_number}: field_match.contains must be a non-empty string")
+    return FieldMatch(field=data["field"], contains=data["contains"])
 
 
 def rule_from_dict(data: Any, *, allow_test: bool = False) -> Rule:
@@ -111,13 +166,19 @@ def rule_from_dict(data: Any, *, allow_test: bool = False) -> Rule:
         raise RuleError("steps must be a non-empty list")
     steps: list[Step] = []
     for number, raw_step in enumerate(raw_steps, start=1):
-        if not isinstance(raw_step, dict) or set(raw_step) != set(_STEP_FIELDS):
-            raise RuleError(f"step {number} must have exactly the fields event_type and min_count")
+        if not isinstance(raw_step, dict) or set(raw_step) not in (set(_STEP_FIELDS), set(_STEP_FIELDS_WITH_MATCH)):
+            raise RuleError(
+                f"step {number} must have exactly the fields event_type and min_count "
+                "(an optional field_match is also allowed)"
+            )
         if raw_step["event_type"] not in ALLOWED_EVENT_TYPES:
             raise RuleError(f"step {number}: event_type must be one of " + ", ".join(ALLOWED_EVENT_TYPES))
         if not _is_int(raw_step["min_count"]) or raw_step["min_count"] < 1:
             raise RuleError(f"step {number}: min_count must be a whole number of at least 1")
-        steps.append(Step(raw_step["event_type"], raw_step["min_count"]))
+        field_match = None
+        if "field_match" in raw_step:
+            field_match = _field_match_from_dict(raw_step["field_match"], number, raw_step["event_type"])
+        steps.append(Step(raw_step["event_type"], raw_step["min_count"], field_match))
 
     return Rule(
         rule_id=data["rule_id"].strip(),

@@ -79,8 +79,8 @@ def load_events(db_path: str) -> list[EventPoint]:
     connection = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
     try:
         rows = connection.execute(
-            "SELECT id, raw_event_ref, event_type, timestamp, process_id, process_guid FROM events "
-            "WHERE event_type != 'unsupported' ORDER BY id"
+            "SELECT id, raw_event_ref, event_type, timestamp, process_id, process_guid, file_path, command_line "
+            "FROM events WHERE event_type != 'unsupported' ORDER BY id"
         ).fetchall()
     finally:
         connection.close()

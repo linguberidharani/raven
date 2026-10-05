@@ -27,6 +27,13 @@ The defaults are strict / skip_matched / minimal / inclusive. Of the 32 combinat
 skip_matched and minimal membership reproduces the reference numbers of the spec on the reference data (groups
 19, 14 and 54; 558 file creation, 14 network connection and 25 process creation events in the groups; see
 explore.py). Whether the window edge is inclusive makes no difference on that data; inclusive is used.
+
+A step may carry an optional field_match (rule_schema.py): besides its event_type, an event must also
+contain a piece of text in one of its fields (file_path or command_line) to satisfy that step. Every
+place that tests whether an event satisfies a step -- strict order, loose order, and "window" membership
+-- goes through the single helper _step_matches, so a field_match is honoured the same way everywhere and
+is never silently ignored depending on the matching mode. A step without a field_match matches exactly as
+before: on event_type alone.
 """
 
 from __future__ import annotations
@@ -35,7 +42,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from raven.correlation.rule_schema import Rule
+from raven.correlation.rule_schema import Rule, Step
 from raven.parsers.time_utils import parse_timestamp
 
 STEP_ORDERS = ("strict", "loose")
@@ -80,6 +87,8 @@ class EventPoint:
     time_ms: int
     process_id: int | None
     process_guid: str | None
+    file_path: str | None = None
+    command_line: str | None = None
 
     @classmethod
     def create(
@@ -90,8 +99,13 @@ class EventPoint:
         timestamp: str,
         process_id: int | None = None,
         process_guid: str | None = None,
+        file_path: str | None = None,
+        command_line: str | None = None,
     ) -> "EventPoint":
-        return cls(row_id, raw_event_ref, event_type, timestamp, timestamp_to_ms(timestamp), process_id, process_guid)
+        return cls(
+            row_id, raw_event_ref, event_type, timestamp, timestamp_to_ms(timestamp),
+            process_id, process_guid, file_path, command_line,
+        )
 
 
 @dataclass(frozen=True)
@@ -110,6 +124,18 @@ def _sorted_events(events: list[EventPoint]) -> list[EventPoint]:
     return sorted(events, key=lambda e: (e.time_ms, e.row_id))
 
 
+def _step_matches(step: Step, event: EventPoint) -> bool:
+    """Whether one event satisfies one step: its event_type, and (if the step has a field_match) a
+    case-insensitive substring of that field's value. A step without a field_match matches on
+    event_type alone, exactly as before field_match existed."""
+    if event.event_type != step.event_type:
+        return False
+    if step.field_match is None:
+        return True
+    value = getattr(event, step.field_match.field, None)
+    return value is not None and step.field_match.contains.lower() in value.lower()
+
+
 def _match_from(rule: Rule, evs: list[EventPoint], anchor: int, options: EngineOptions) -> list[int] | None:
     """Try to match the rule with the window opened by evs[anchor]. Return the matched indexes or None."""
     limit = evs[anchor].time_ms + rule.window_ms
@@ -125,7 +151,7 @@ def _match_from(rule: Rule, evs: list[EventPoint], anchor: int, options: EngineO
             picked: list[int] = []
             k = position
             while k < len(window) and len(picked) < step.min_count:
-                if evs[window[k]].event_type == step.event_type:
+                if _step_matches(step, evs[window[k]]):
                     picked.append(window[k])
                 k += 1
             if len(picked) < step.min_count:
@@ -135,15 +161,14 @@ def _match_from(rule: Rule, evs: list[EventPoint], anchor: int, options: EngineO
     else:
         used: set[int] = set()
         for step in rule.steps:
-            picked = [i for i in window if evs[i].event_type == step.event_type and i not in used][: step.min_count]
+            picked = [i for i in window if _step_matches(step, evs[i]) and i not in used][: step.min_count]
             if len(picked) < step.min_count:
                 return None
             used.update(picked)
             matched.extend(picked)
 
     if options.membership == "window":
-        types = {step.event_type for step in rule.steps}
-        return [i for i in window if evs[i].event_type in types]
+        return [i for i in window if any(_step_matches(step, evs[i]) for step in rule.steps)]
     return sorted(matched)
 
 
@@ -183,7 +208,7 @@ def find_groups(rule: Rule, events: list[EventPoint], options: EngineOptions = E
                         window_start=start,
                         window_end=members[-1].timestamp,
                         event_row_ids=tuple(m.row_id for m in members),
-                        step_counts=tuple(sum(1 for m in members if m.event_type == s.event_type) for s in rule.steps),
+                        step_counts=tuple(sum(1 for m in members if _step_matches(s, m)) for s in rule.steps),
                     )
                 )
             if options.group_policy == "first":
@@ -212,6 +237,13 @@ def find_all_groups(rules: list[Rule], events: list[EventPoint], options: Engine
 def explain_group(rule: Rule, group: Group, events_by_row_id: dict[int, EventPoint]) -> dict[str, Any]:
     """Why a group matched: the rule, the steps with required and found counts, the window and the events."""
     members = [events_by_row_id[row_id] for row_id in group.event_row_ids]
+
+    def step_info(step: Step, found: int) -> dict[str, Any]:
+        info: dict[str, Any] = {"event_type": step.event_type, "required": step.min_count, "found": found}
+        if step.field_match is not None:
+            info["field_match"] = {"field": step.field_match.field, "contains": step.field_match.contains}
+        return info
+
     return {
         "group_id": group.group_id,
         "rule_id": rule.rule_id,
@@ -223,10 +255,7 @@ def explain_group(rule: Rule, group: Group, events_by_row_id: dict[int, EventPoi
         "time_window_seconds": rule.time_window_seconds,
         "window_start": group.window_start,
         "window_end": group.window_end,
-        "steps": [
-            {"event_type": step.event_type, "required": step.min_count, "found": found}
-            for step, found in zip(rule.steps, group.step_counts)
-        ],
+        "steps": [step_info(step, found) for step, found in zip(rule.steps, group.step_counts)],
         "event_count": len(members),
         "event_refs": [member.raw_event_ref for member in members],
     }

@@ -40,8 +40,14 @@ from raven.fileio import write_text_atomic
 
 
 def _load_events(session: Session) -> list[EventPoint]:
+    # file_path and command_line are selected alongside the original six columns so a step's optional
+    # field_match (rule_schema.py) has something to test; every existing rule ignores them (field_match
+    # is None), so this adds two more positions to each row without changing anything for those rules.
     rows = session.execute(
-        select(Event.id, Event.raw_event_ref, Event.event_type, Event.timestamp, Event.process_id, Event.process_guid)
+        select(
+            Event.id, Event.raw_event_ref, Event.event_type, Event.timestamp, Event.process_id, Event.process_guid,
+            Event.file_path, Event.command_line,
+        )
         .where(Event.event_type != "unsupported")
         .order_by(Event.id)
     ).all()
