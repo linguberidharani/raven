@@ -225,19 +225,16 @@ export default function Dashboard() {
             <StatCard label="High severity findings" value={data.totals.high_severity_findings} icon="shield" tone="danger" note="Correlation groups of high severity rules" />
           </div>
 
-          <div className="dash-grid">
-            <div className="span-8">
+          {/* Two independent columns, each stacking its own cards top to bottom (like a masonry layout):
+              a card's height never forces empty space under a shorter neighbour, because the two columns
+              are not sharing grid rows -- each simply flows to its own natural height. Evidence processing
+              is a closing, full-width section below both columns. */}
+          <div className="dash-columns">
+            <div className="dash-col dash-col-main">
               <Card title="Latest attack session" actions={<BasisBadge basis="derived" />}>
                 <LatestSession session={data.latest_session} />
               </Card>
-            </div>
-            <div className="span-4">
-              <Card title="Cases by severity">
-                <SeverityDonut counts={data.cases_by_severity} />
-              </Card>
-            </div>
 
-            <div className="span-8">
               <div className="card table-card">
                 <div className="card-header padded">
                   <h2>Recent investigations</h2>
@@ -274,56 +271,55 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
-            </div>
-            <div className="span-4">
-              <AlertsCard alerts={data.alerts} />
+
+              <ActivityCard items={data.recent_activity} />
             </div>
 
-            <div className="span-4">
+            <div className="dash-col dash-col-side">
+              <Card title="Cases by severity">
+                <SeverityDonut counts={data.cases_by_severity} />
+              </Card>
+
+              <AlertsCard alerts={data.alerts} />
+
               <Card title="Investigation status">
                 <SegmentBar counts={data.cases_by_status} colors={STATUS_COLORS} label="Investigations by status" />
               </Card>
-            </div>
-            <div className="span-4">
-              <ActivityCard items={data.recent_activity} />
-            </div>
-            <div className="span-4">
+
               <Card title="Findings by severity" actions={<BasisBadge basis="derived" />}>
                 <FindingBars counts={data.findings_by_severity} />
               </Card>
             </div>
-
-            <div className="span-12">
-              <Card title="Evidence processing">
-                <dl className="evidence-counts">
-                  {EVIDENCE_ORDER.map((key) => (
-                    <div key={key}>
-                      <dt>{statusInfo(key).label}</dt>
-                      <dd>{formatNumber(data.evidence_by_status[key] ?? 0)}</dd>
-                    </div>
-                  ))}
-                </dl>
-                {data.evidence_queue.length === 0 ? (
-                  <p className="muted">Every evidence file is ready for investigation.</p>
-                ) : (
-                  <ul className="list">
-                    {data.evidence_queue.map((file) => (
-                      <li className="list-row" key={file.id}>
-                        <div className="list-main">
-                          <div className="list-title mono">{file.filename}</div>
-                          <div className="faint">
-                            {file.code} · {formatTimestamp(file.created_at)}
-                            {file.error ? ` · ${file.error}` : ''}
-                          </div>
-                        </div>
-                        <StatusBadge value={file.status} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Card>
-            </div>
           </div>
+
+          <Card title="Evidence processing">
+            <dl className="evidence-counts">
+              {EVIDENCE_ORDER.map((key) => (
+                <div key={key}>
+                  <dt>{statusInfo(key).label}</dt>
+                  <dd>{formatNumber(data.evidence_by_status[key] ?? 0)}</dd>
+                </div>
+              ))}
+            </dl>
+            {data.evidence_queue.length === 0 ? (
+              <p className="muted">Every evidence file is ready for investigation.</p>
+            ) : (
+              <ul className="list">
+                {data.evidence_queue.map((file) => (
+                  <li className="list-row" key={file.id}>
+                    <div className="list-main">
+                      <div className="list-title mono">{file.filename}</div>
+                      <div className="faint">
+                        {file.code} · {formatTimestamp(file.created_at)}
+                        {file.error ? ` · ${file.error}` : ''}
+                      </div>
+                    </div>
+                    <StatusBadge value={file.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
         </>
       ) : null}
     </div>

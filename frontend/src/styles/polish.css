@@ -22,18 +22,17 @@ body {
 }
 
 .stat-grid > *,
-.dash-grid > *,
+.dash-col > *,
 .rule-grid > *,
 .impact-grid > * {
   animation: rise 0.5s ease-out both;
 }
 
-.stat-grid > *:nth-child(2), .dash-grid > *:nth-child(2), .rule-grid > *:nth-child(2), .impact-grid > *:nth-child(2) { animation-delay: 0.05s; }
-.stat-grid > *:nth-child(3), .dash-grid > *:nth-child(3), .rule-grid > *:nth-child(3), .impact-grid > *:nth-child(3) { animation-delay: 0.1s; }
-.stat-grid > *:nth-child(4), .dash-grid > *:nth-child(4), .rule-grid > *:nth-child(4), .impact-grid > *:nth-child(4) { animation-delay: 0.15s; }
-.stat-grid > *:nth-child(5), .dash-grid > *:nth-child(5) { animation-delay: 0.2s; }
-.stat-grid > *:nth-child(6), .dash-grid > *:nth-child(6) { animation-delay: 0.25s; }
-.dash-grid > *:nth-child(n + 7) { animation-delay: 0.3s; }
+.stat-grid > *:nth-child(2), .dash-col > *:nth-child(2), .rule-grid > *:nth-child(2), .impact-grid > *:nth-child(2) { animation-delay: 0.05s; }
+.stat-grid > *:nth-child(3), .dash-col > *:nth-child(3), .rule-grid > *:nth-child(3), .impact-grid > *:nth-child(3) { animation-delay: 0.1s; }
+.stat-grid > *:nth-child(4), .dash-col > *:nth-child(4), .rule-grid > *:nth-child(4), .impact-grid > *:nth-child(4) { animation-delay: 0.15s; }
+.stat-grid > *:nth-child(5), .dash-col > *:nth-child(5) { animation-delay: 0.2s; }
+.stat-grid > *:nth-child(6) { animation-delay: 0.25s; }
 
 /* Thin dark scrollbars that match the theme */
 * {
@@ -126,17 +125,30 @@ body {
   transition: border-color 120ms ease, color 120ms ease;
 }
 
-/* Dashboard */
-.dash-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-auto-flow: dense;
-  align-items: start;
+/* Dashboard: two independent columns, each a plain vertical flex stack. A column's height is only ever the
+   sum of its own cards' natural heights and the gaps between them -- it is never forced to match the other
+   column's height (which a shared CSS Grid row would do), so a short card never leaves empty space below
+   itself while something else finishes. The only thing common to both columns is their top edge. */
+.dash-columns {
+  display: flex;
+  align-items: flex-start;
   gap: 16px;
 }
 
-/* Every card keeps its own natural height (no stretching); dense packing avoids leaving an unused column
-   behind if a future card's span does not divide the row evenly, so the grid keeps flowing without gaps. */
+.dash-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.dash-col-main {
+  flex: 2 1 0;
+}
+
+.dash-col-side {
+  flex: 1 1 0;
+}
 
 .dashboard {
   gap: 16px;
@@ -145,12 +157,6 @@ body {
 .stat-grid-icons {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-
-.dash-grid > * { min-width: 0; }
-.span-4 { grid-column: span 4; }
-.span-6 { grid-column: span 6; }
-.span-8 { grid-column: span 8; }
-.span-12 { grid-column: span 12; }
 
 .stat-card.with-icon {
   flex-direction: row;
@@ -387,17 +393,15 @@ body {
 }
 
 @media (max-width: 1100px) {
-  .span-4,
-  .span-6,
-  .span-8 {
-    grid-column: span 12;
+  .dash-columns {
+    flex-direction: column;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .route-fade,
   .stat-grid > *,
-  .dash-grid > *,
+  .dash-col > *,
   .rule-grid > *,
   .impact-grid > *,
   .donut,
