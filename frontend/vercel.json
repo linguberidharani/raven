@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://raven-5the.onrender.com/api/:path*" }
+    { "source": "/api/:path*", "destination": "https://raven-uc8n.onrender.com/api/:path*" }
   ]
 }
